@@ -1,0 +1,7 @@
+FROM ghcr.io/lavalink-devs/lavalink:4
+
+# Official image expects application.yml at /opt/Lavalink/application.yml
+COPY application.yml /opt/Lavalink/application.yml
+
+EXPOSE 2333
+  
