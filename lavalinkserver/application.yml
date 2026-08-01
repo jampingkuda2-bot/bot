@@ -1,0 +1,77 @@
+server:
+  port: 2333
+  address: 0.0.0.0
+
+lavalink:
+  plugins:
+    # Handles YouTube playback (core Lavalink dropped built-in YouTube support).
+    # Actively maintained to keep up with YouTube's anti-bot changes — check
+    # https://github.com/lavalink-devs/youtube-source/releases for the latest version.
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.13.3"
+      repository: "https://maven.lavalink.dev/releases"
+    # Adds Spotify + SoundCloud + Apple Music + Deezer search/resolve support.
+    # Check https://github.com/topi314/LavaSrc/releases for the latest version.
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.6.0"
+      repository: "https://maven.lavalink.dev/releases"
+
+  server:
+    password: "${LAVALINK_PASSWORD}"
+    sources:
+      youtube: false # handled by the youtube-source plugin instead
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    trackStuckThresholdMs: 10000
+    youtubePlaylistLoadLimit: 6
+    playerUpdateInterval: 5
+    youtubeSearchEnabled: true
+    soundcloudSearchEnabled: true
+    opusEncodingQuality: 10
+    resamplingQuality: LOW
+
+plugins:
+  youtube:
+    enabled: true
+    allowSearch: true
+    allowDirectVideoIds: true
+    allowDirectPlaylistIds: true
+    clients:
+      - MUSIC
+      - ANDROID_VR
+      - WEB
+      - WEBEMBEDDED
+
+  lavasrc:
+    providers:
+      - "ytsearch:\"%ISRC%\""
+      - "ytsearch:%QUERY%"
+    sources:
+      spotify: true
+      soundcloud: true
+      applemusic: false
+      deezer: false
+      yandexmusic: false
+      flowerytts: false
+    spotify:
+      clientId: "${SPOTIFY_CLIENT_ID}"
+      clientSecret: "${SPOTIFY_CLIENT_SECRET}"
+      countryCode: "US"
+
+metrics:
+  prometheus:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 3
+      
