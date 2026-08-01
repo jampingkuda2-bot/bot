@@ -26,14 +26,38 @@ for (const file of commandFiles) {
 }
 
 // ---- Setup Lavalink node(s) via Kazagumo/Shoukaku ----
+// Primary node = your own Lavalink (should always be filled in).
+// Backup nodes (2 and 3) are optional — leave their _HOST var empty/unset to skip.
+// If the primary node goes down mid-playback, moveOnDisconnect below will
+// automatically move players to the next available node in this list.
 const Nodes = [
   {
-    name: 'main',
+    name: 'primary',
     url: `${process.env.LAVALINK_HOST}:${process.env.LAVALINK_PORT || 2333}`,
     auth: process.env.LAVALINK_PASSWORD,
     secure: process.env.LAVALINK_SECURE === 'true',
   },
 ];
+
+if (process.env.LAVALINK_HOST_2) {
+  Nodes.push({
+    name: 'backup-1',
+    url: `${process.env.LAVALINK_HOST_2}:${process.env.LAVALINK_PORT_2 || 2333}`,
+    auth: process.env.LAVALINK_PASSWORD_2,
+    secure: process.env.LAVALINK_SECURE_2 === 'true',
+  });
+}
+
+if (process.env.LAVALINK_HOST_3) {
+  Nodes.push({
+    name: 'backup-2',
+    url: `${process.env.LAVALINK_HOST_3}:${process.env.LAVALINK_PORT_3 || 2333}`,
+    auth: process.env.LAVALINK_PASSWORD_3,
+    secure: process.env.LAVALINK_SECURE_3 === 'true',
+  });
+}
+
+console.log(`🔗 Configured ${Nodes.length} Lavalink node(s): ${Nodes.map((n) => n.name).join(', ')}`);
 
 client.kazagumo = new Kazagumo(
   {
@@ -46,10 +70,13 @@ client.kazagumo = new Kazagumo(
   new Connectors.DiscordJS(client),
   Nodes,
   {
-    moveOnDisconnect: false,
+    // If the node currently powering a player disconnects, automatically
+    // move that player to the next healthy node instead of just stopping.
+    moveOnDisconnect: true,
     resumable: false,
     resumableTimeout: 30,
-    reconnectTries: 5,
+    reconnectTries: 3,
+    reconnectInterval: 5000,
     restTimeout: 10000,
   }
 );
