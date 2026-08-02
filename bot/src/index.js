@@ -4,6 +4,9 @@ const path = require('path');
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { deployCommands } = require('./deploy');
 const { handleButton } = require('./lib/buttonHandler');
+const { setupCookies } = require('./lib/cookies');
+
+setupCookies();
 
 const client = new Client({
   intents: [
