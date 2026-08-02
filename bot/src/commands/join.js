@@ -11,7 +11,14 @@ module.exports = {
     if (getQueue(interaction.guildId)) {
       return interaction.reply({ content: 'ℹ️ I am already connected to a voice channel here.', ephemeral: true });
     }
-    createQueue(interaction.guildId, voiceChannel, interaction.channel);
-    await interaction.reply(`✅ Joined **${voiceChannel.name}**`);
+
+    await interaction.deferReply();
+    try {
+      await createQueue(interaction.guildId, voiceChannel, interaction.channel);
+      await interaction.editReply(`✅ Joined **${voiceChannel.name}**`);
+    } catch (error) {
+      console.error(error);
+      await interaction.editReply(`❌ Could not join: \`${error.message}\``);
+    }
   },
 };
