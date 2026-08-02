@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const { getRandomProxy } = require('./proxyPool');
+const { getCookiesPath } = require('./cookies');
 
 // Resolves a search term or direct URL (YouTube/SoundCloud/etc, anything
 // yt-dlp supports) into basic track info, using a random proxy per call.
@@ -10,6 +11,8 @@ function resolve(query) {
     const proxy = getRandomProxy();
 
     const args = ['-j', '--no-playlist', '--no-warnings', '--quiet'];
+    const cookies = getCookiesPath();
+    if (cookies) args.push('--cookies', cookies);
     if (proxy) args.push('--proxy', proxy);
     args.push(target);
 
