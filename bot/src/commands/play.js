@@ -25,7 +25,14 @@ module.exports = {
     await interaction.deferReply();
 
     let queue = getQueue(interaction.guildId);
-    if (!queue) queue = createQueue(interaction.guildId, voiceChannel, interaction.channel);
+    if (!queue) {
+      try {
+        queue = await createQueue(interaction.guildId, voiceChannel, interaction.channel);
+      } catch (error) {
+        console.error(error);
+        return interaction.editReply(`❌ Could not join voice channel: \`${error.message}\``);
+      }
+    }
 
     try {
       const info = await resolve(query);
