@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const { PassThrough } = require('stream');
 const { getProxyList } = require('./proxyPool');
+const { getCookiesPath } = require('./cookies');
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -10,12 +11,11 @@ function shuffle(arr) {
   return arr;
 }
 
-// Tries ONE proxy (or direct if proxy is null). Resolves with a live PCM
-// stream as soon as the first audio bytes arrive, or rejects if nothing
-// comes through within the timeout / the process dies early.
-function spawnAttempt(url, proxy, timeoutMs = 10000) {
+function spawnAttempt(url, proxy, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
-    const ytArgs = ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--quiet', '--no-warnings'];
+    const ytArgs = ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--quiet', '--no-warnings', '--extractor-args', 'youtube:player_client=android,web'];
+    const cookies = getCookiesPath();
+    if (cookies) ytArgs.push('--cookies', cookies);
     if (proxy) ytArgs.push('--proxy', proxy);
     ytArgs.push(url);
 
@@ -37,6 +37,8 @@ function spawnAttempt(url, proxy, timeoutMs = 10000) {
 
     const output = new PassThrough();
     let settled = false;
+    let bytesReceived = 0;
+    const MIN_BYTES_TO_CONFIRM = 65536;
 
     function cleanupProcs() {
       try { ytdlp.kill('SIGKILL'); } catch {}
@@ -57,9 +59,17 @@ function spawnAttempt(url, proxy, timeoutMs = 10000) {
 
     ffmpeg.stdout.on('data', (chunk) => {
       output.write(chunk);
-      finish(); // resolve on first byte — proves this proxy actually works
+      bytesReceived += chunk.length;
+      if (!settled && bytesReceived >= MIN_BYTES_TO_CONFIRM) {
+        finish();
+      }
     });
-    ffmpeg.stdout.on('end', () => output.end());
+    ffmpeg.stdout.on('end', () => {
+      output.end();
+      if (!settled) {
+        finish(new Error(`Stream ended too early (only ${bytesReceived} bytes received)`));
+      }
+    });
 
     ffmpeg.on('close', (code) => {
       if (!settled) {
@@ -73,12 +83,10 @@ function spawnAttempt(url, proxy, timeoutMs = 10000) {
   });
 }
 
-// Tries every configured proxy (in random order), then falls back to a
-// direct connection if all proxies fail. Logs which one ends up working.
 async function getStream(url) {
   const proxies = getProxyList();
   const candidates = shuffle([...proxies]);
-  candidates.push(null); // always try direct as final fallback
+  candidates.push(null);
 
   let lastError;
   for (const proxy of candidates) {
