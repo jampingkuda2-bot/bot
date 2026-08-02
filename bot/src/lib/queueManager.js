@@ -27,13 +27,17 @@ function createQueue(guildId, voiceChannel, textChannel) {
   const player = createAudioPlayer();
   connection.subscribe(player);
 
+  player.on('debug', (msg) => console.log('[AudioPlayer debug]', msg));
+  connection.on('debug', (msg) => console.log('[VoiceConnection debug]', msg));
+  connection.on('error', (err) => console.error('[VoiceConnection error]', err));
+
   const queue = {
     connection,
     player,
     textChannel,
     songs: [],
     volume: 100,
-    loop: 'none',
+    loop: 'none', // 'none' | 'track' | 'queue'
     playing: false,
     currentResource: null,
   };
