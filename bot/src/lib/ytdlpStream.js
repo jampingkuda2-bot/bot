@@ -1,74 +1,99 @@
 const { spawn } = require('child_process');
 const { PassThrough } = require('stream');
-const { getRandomProxy } = require('./proxyPool');
+const { getProxyList } = require('./proxyPool');
 
-// Spawns yt-dlp -> ffmpeg as a pipeline and returns a raw PCM stream ready
-// for @discordjs/voice. A fresh random proxy is picked for every track.
-// If no audio bytes arrive within a few seconds (dead proxy, blocked video,
-// etc.) this emits an 'error' on the returned stream instead of hanging
-// forever silently.
-function spawnStream(url) {
-  const proxy = getRandomProxy();
-
-  const ytArgs = ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--quiet', '--no-warnings'];
-  if (proxy) {
-    ytArgs.push('--proxy', proxy);
-    console.log(`🔄 Streaming via proxy: ${proxy.replace(/\/\/.*@/, '//<hidden>@')}`);
-  } else {
-    console.log('🔄 Streaming with no proxy (WEBSHARE_PROXIES not set)');
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  ytArgs.push(url);
-
-  const ytdlp = spawn('yt-dlp', ytArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-  let ytErr = '';
-  ytdlp.stderr.on('data', (d) => (ytErr += d.toString()));
-  ytdlp.on('close', (code) => {
-    if (code !== 0) console.error(`[yt-dlp] exited with code ${code}: ${ytErr.trim().slice(0, 500)}`);
-  });
-  ytdlp.on('error', (e) => console.error('[yt-dlp] spawn error:', e.message));
-
-  const ffmpeg = spawn(
-    'ffmpeg',
-    ['-i', 'pipe:0', '-analyzeduration', '0', '-loglevel', 'error', '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1'],
-    { stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-
-  ytdlp.stdout.pipe(ffmpeg.stdin);
-
-  let ffErr = '';
-  ffmpeg.stderr.on('data', (d) => (ffErr += d.toString()));
-  ffmpeg.on('close', (code) => {
-    if (code !== 0) console.error(`[ffmpeg] exited with code ${code}: ${ffErr.trim().slice(0, 500)}`);
-  });
-  ffmpeg.on('error', (e) => console.error('[ffmpeg] spawn error:', e.message));
-
-  const output = new PassThrough();
-  let receivedData = false;
-
-  ffmpeg.stdout.on('data', (chunk) => {
-    receivedData = true;
-    output.write(chunk);
-  });
-  ffmpeg.stdout.on('end', () => output.end());
-
-  const watchdog = setTimeout(() => {
-    if (!receivedData) {
-      console.error('[stream] No audio data received within 8s — aborting this track.');
-      cleanup();
-      output.emit('error', new Error('No audio data received (proxy may have failed or track is blocked)'));
-    }
-  }, 8000);
-
-  function cleanup() {
-    clearTimeout(watchdog);
-    try { ytdlp.kill('SIGKILL'); } catch {}
-    try { ffmpeg.kill('SIGKILL'); } catch {}
-  }
-
-  ffmpeg.on('close', cleanup);
-  output.on('close', cleanup);
-
-  return output;
+  return arr;
 }
 
-module.exports = { spawnStream };
+// Tries ONE proxy (or direct if proxy is null). Resolves with a live PCM
+// stream as soon as the first audio bytes arrive, or rejects if nothing
+// comes through within the timeout / the process dies early.
+function spawnAttempt(url, proxy, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const ytArgs = ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--quiet', '--no-warnings'];
+    if (proxy) ytArgs.push('--proxy', proxy);
+    ytArgs.push(url);
+
+    const ytdlp = spawn('yt-dlp', ytArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let ytErr = '';
+    ytdlp.stderr.on('data', (d) => (ytErr += d.toString()));
+    ytdlp.on('error', (e) => finish(new Error(`yt-dlp spawn error: ${e.message}`)));
+
+    const ffmpeg = spawn(
+      'ffmpeg',
+      ['-i', 'pipe:0', '-analyzeduration', '0', '-loglevel', 'error', '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1'],
+      { stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    ytdlp.stdout.pipe(ffmpeg.stdin);
+
+    let ffErr = '';
+    ffmpeg.stderr.on('data', (d) => (ffErr += d.toString()));
+    ffmpeg.on('error', (e) => finish(new Error(`ffmpeg spawn error: ${e.message}`)));
+
+    const output = new PassThrough();
+    let settled = false;
+
+    function cleanupProcs() {
+      try { ytdlp.kill('SIGKILL'); } catch {}
+      try { ffmpeg.kill('SIGKILL'); } catch {}
+    }
+
+    function finish(err) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      if (err) {
+        cleanupProcs();
+        reject(err);
+      } else {
+        resolve(output);
+      }
+    }
+
+    ffmpeg.stdout.on('data', (chunk) => {
+      output.write(chunk);
+      finish(); // resolve on first byte — proves this proxy actually works
+    });
+    ffmpeg.stdout.on('end', () => output.end());
+
+    ffmpeg.on('close', (code) => {
+      if (!settled) {
+        finish(new Error(`No audio (ffmpeg code ${code}): ${(ffErr || ytErr).trim().slice(0, 300) || 'no output'}`));
+      }
+    });
+
+    const watchdog = setTimeout(() => {
+      finish(new Error(`Timed out after ${timeoutMs / 1000}s waiting for audio`));
+    }, timeoutMs);
+  });
+}
+
+// Tries every configured proxy (in random order), then falls back to a
+// direct connection if all proxies fail. Logs which one ends up working.
+async function getStream(url) {
+  const proxies = getProxyList();
+  const candidates = shuffle([...proxies]);
+  candidates.push(null); // always try direct as final fallback
+
+  let lastError;
+  for (const proxy of candidates) {
+    const label = proxy ? proxy.replace(/\/\/.*@/, '//<hidden>@') : 'direct connection';
+    console.log(`🔄 Trying stream via ${label}...`);
+    try {
+      const stream = await spawnAttempt(url, proxy);
+      console.log(`✅ Stream established via ${label}`);
+      return stream;
+    } catch (err) {
+      console.error(`⚠️ Failed via ${label}: ${err.message}`);
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('All streaming attempts failed');
+}
+
+module.exports = { getStream };
