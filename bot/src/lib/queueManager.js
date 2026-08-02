@@ -7,7 +7,7 @@ const {
   entersState,
   StreamType,
 } = require('@discordjs/voice');
-const { spawnStream } = require('./ytdlpStream');
+const { getStream } = require('./ytdlpStream');
 const { buildNowPlayingEmbed } = require('./nowPlayingEmbed');
 
 const guildQueues = new Map();
@@ -33,7 +33,7 @@ function createQueue(guildId, voiceChannel, textChannel) {
     textChannel,
     songs: [],
     volume: 100,
-    loop: 'none', // 'none' | 'track' | 'queue'
+    loop: 'none',
     playing: false,
     currentResource: null,
   };
@@ -84,7 +84,7 @@ async function playNext(guildId) {
   queue.playing = true;
 
   try {
-    const stream = spawnStream(song.url);
+    const stream = await getStream(song.url);
     const resource = createAudioResource(stream, { inputType: StreamType.Raw, inlineVolume: true });
     resource.volume.setVolume(queue.volume / 100);
     queue.currentResource = resource;
@@ -108,7 +108,6 @@ function handleTrackEnd(guildId) {
   } else if (queue.loop !== 'track') {
     queue.songs.shift();
   }
-  // if loop === 'track', keep song[0] as-is and just replay it
 
   playNext(guildId);
 }
