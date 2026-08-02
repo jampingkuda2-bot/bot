@@ -16,13 +16,20 @@ function getQueue(guildId) {
   return guildQueues.get(guildId);
 }
 
-function createQueue(guildId, voiceChannel, textChannel) {
+async function createQueue(guildId, voiceChannel, textChannel) {
   const connection = joinVoiceChannel({
     channelId: voiceChannel.id,
     guildId,
     adapterCreator: voiceChannel.guild.voiceAdapterCreator,
     selfDeaf: true,
   });
+
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, 20000);
+  } catch (e) {
+    try { connection.destroy(); } catch {}
+    throw new Error('Could not establish a stable voice connection in time.');
+  }
 
   const player = createAudioPlayer();
   connection.subscribe(player);
@@ -37,7 +44,7 @@ function createQueue(guildId, voiceChannel, textChannel) {
     textChannel,
     songs: [],
     volume: 100,
-    loop: 'none', // 'none' | 'track' | 'queue'
+    loop: 'none',
     playing: false,
     currentResource: null,
   };
