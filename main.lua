@@ -1,6 +1,5 @@
 -- ============================================================
--- FISH IT - ELEMENTAL WEATHER DETECTOR v7
--- Mendeteksi: Fire, Ice, Storm, Aurora, Meteor Shower, Fog
+-- FISH IT - ELEMENTAL WEATHER DETECTOR v8 (FIX UI)
 -- ============================================================
 
 local player = game.Players.LocalPlayer
@@ -10,7 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
-print("🚀 Weather Detector v7 Loading...")
+print("🚀 Weather Detector v8 Loading...")
 
 -- ============================================================
 -- KONFIGURASI WEBHOOK
@@ -21,47 +20,12 @@ local WEBHOOK_URL = ""  -- Isi di sini atau lewat UI
 -- DATA CUACA (TERBARU)
 -- ============================================================
 local weatherData = {
-    -- Cuaca Elemental Inti (Pulau Elemental)
-    Fire = {
-        Name = "Fire",
-        Emoji = "🔥",
-        Color = Color3.fromRGB(255, 68, 0),
-        Keywords = {"fire", "api", "flame", "lava", "volcano"}
-    },
-    Ice = {
-        Name = "Ice",
-        Emoji = "🧊",
-        Color = Color3.fromRGB(100, 200, 255),
-        Keywords = {"ice", "frost", "snow", "freeze", "glacier"}
-    },
-    Storm = {
-        Name = "Storm",
-        Emoji = "⛈️",
-        Color = Color3.fromRGB(255, 170, 0),
-        Keywords = {"storm", "badai", "thunder", "lightning", "petir"}
-    },
-    
-    -- Cuaca Event Spesial
-    Aurora = {
-        Name = "Aurora",
-        Emoji = "🌌",
-        Color = Color3.fromRGB(0, 255, 200),
-        Keywords = {"aurora"}
-    },
-    
-    -- Cuaca Update Terbaru (Mariana Trench)
-    MeteorShower = {
-        Name = "Meteor Shower",
-        Emoji = "☄️",
-        Color = Color3.fromRGB(255, 100, 50),
-        Keywords = {"meteor", "shower", "hujan meteor", "meteor shower"}
-    },
-    Fog = {
-        Name = "Fog",
-        Emoji = "🌫️",
-        Color = Color3.fromRGB(180, 180, 200),
-        Keywords = {"fog", "kabut"}
-    }
+    Fire = { Name = "Fire", Emoji = "🔥", Color = Color3.fromRGB(255, 68, 0), Keywords = {"fire", "api", "flame", "lava", "volcano"} },
+    Ice = { Name = "Ice", Emoji = "🧊", Color = Color3.fromRGB(100, 200, 255), Keywords = {"ice", "frost", "snow", "freeze", "glacier"} },
+    Storm = { Name = "Storm", Emoji = "⛈️", Color = Color3.fromRGB(255, 170, 0), Keywords = {"storm", "badai", "thunder", "lightning", "petir"} },
+    Aurora = { Name = "Aurora", Emoji = "🌌", Color = Color3.fromRGB(0, 255, 200), Keywords = {"aurora"} },
+    MeteorShower = { Name = "Meteor Shower", Emoji = "☄️", Color = Color3.fromRGB(255, 100, 50), Keywords = {"meteor", "shower", "hujan meteor"} },
+    Fog = { Name = "Fog", Emoji = "🌫️", Color = Color3.fromRGB(180, 180, 200), Keywords = {"fog", "kabut"} }
 }
 
 -- ============================================================
@@ -79,14 +43,12 @@ local isMinimized = false
 local function detectWeather()
     local found = nil
     
-    -- 1. CEK BILLBOARD / TEKS EVENT (contoh: "Thunderzilla Hunt", "Aurora Active")
+    -- 1. CEK BILLBOARD / TEKS
     pcall(function()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("BillboardGui") or obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 local text = obj.Text or ""
                 local lower = text:lower()
-                
-                -- Cek keyword di teks
                 for weatherName, data in pairs(weatherData) do
                     for _, kw in ipairs(data.Keywords) do
                         if lower:find(kw) then
@@ -99,16 +61,14 @@ local function detectWeather()
             end
         end
     end)
-    
     if found then return found end
     
-    -- 2. CEK EFFECT / PARTIKEL (Fire, Ice, Lightning, Aurora, Fog)
+    -- 2. CEK EFFECT / PARTIKEL
     pcall(function()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("ParticleEmitter") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") or obj:IsA("Attachment") then
                 local parentName = obj.Parent and obj.Parent.Name or ""
                 local fullName = (parentName .. obj.Name):lower()
-                
                 for weatherName, data in pairs(weatherData) do
                     for _, kw in ipairs(data.Keywords) do
                         if fullName:find(kw) then
@@ -121,10 +81,9 @@ local function detectWeather()
             end
         end
     end)
-    
     if found then return found end
     
-    -- 3. CEK LIGHTING / SKY / ATMOSPHERE
+    -- 3. CEK LIGHTING / SKY
     pcall(function()
         for _, child in pairs(Lighting:GetChildren()) do
             local name = child.Name:lower()
@@ -139,10 +98,9 @@ local function detectWeather()
             end
         end
     end)
-    
     if found then return found end
     
-    -- 4. CEK REPLICATEDSTORAGE (state weather)
+    -- 4. CEK REPLICATEDSTORAGE
     pcall(function()
         for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
             if obj:IsA("StringValue") or obj:IsA("ObjectValue") then
@@ -164,7 +122,7 @@ local function detectWeather()
 end
 
 -- ============================================================
--- FUNGSI REQUEST WEBHOOK (MULTI-METODE)
+-- FUNGSI WEBHOOK (MULTI-METODE)
 -- ============================================================
 local function requestWebhook(url, data)
     if syn and syn.request then
@@ -179,25 +137,16 @@ local function requestWebhook(url, data)
     error("Tidak ada metode request yang tersedia!")
 end
 
--- ============================================================
--- FUNGSI KIRIM WEBHOOK
--- ============================================================
 local function sendWebhook(weatherName, isTest)
     if not webhookEnabled or webhookURL == "" then return false end
     local weather = weatherData[weatherName]
     if not weather and not isTest then return false end
     
-    local title = isTest and "🧪 Test Webhook" or "⚡ Elemental Weather Detected!"
-    local desc = isTest and "Webhook connected!" or 
-                  string.format("%s **%s** is now active!\n📍 Check Elemental Island!", 
-                  weather.Emoji, weather.Name)
-    local color = isTest and 0x00FF00 or 0xFFAA00
-    
     local payload = {
         embeds = {{
-            title = title,
-            description = desc,
-            color = color,
+            title = isTest and "🧪 Test Webhook" or "⚡ Elemental Weather Detected!",
+            description = isTest and "Webhook connected!" or string.format("%s **%s** is now active!", weather.Emoji, weather.Name),
+            color = isTest and 0x00FF00 or 0xFFAA00,
             footer = { text = os.date("%Y-%m-%d %H:%M:%S") }
         }}
     }
@@ -229,30 +178,42 @@ local function detectionLoop()
 end
 
 -- ============================================================
--- UI (DRAG, MINIMIZE, MOBILE SUPPORT)
+-- UI (SEDERHANA & ROBUST)
 -- ============================================================
 local screenGui, mainFrame, weatherLabel, statusLabel, toggleBtn, webhookToggleBtn, inputBox, setBtn, testBtn, minimizeBtn
 
 local function createUI()
     print("🖥️ Creating UI...")
     
+    -- Pastikan PlayerGui ada
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then
+        playerGui = Instance.new("PlayerGui")
+        playerGui.Parent = player
+        print("⚠️ PlayerGui dibuat baru.")
+    end
+    
+    -- Buat ScreenGui
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "WeatherUI"
-    screenGui.Parent = player:WaitForChild("PlayerGui")
+    screenGui.Parent = playerGui
     screenGui.ResetOnSpawn = false
     
+    -- Main Frame (dengan warna solid)
     mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 320, 0, 320)
     mainFrame.Position = UDim2.new(0.5, -160, 0.5, -160)
     mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-    mainFrame.BackgroundTransparency = 0
+    mainFrame.BackgroundTransparency = 0  -- SOLID
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
     
+    -- Corner
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 12)
     corner.Parent = mainFrame
     
+    -- Border
     local border = Instance.new("UIStroke")
     border.Color = Color3.fromRGB(80, 80, 150)
     border.Thickness = 2
@@ -265,11 +226,11 @@ local function createUI()
     titleBar.BackgroundTransparency = 0
     titleBar.BorderSizePixel = 0
     titleBar.Parent = mainFrame
-    
     local titleCorner = Instance.new("UICorner")
     titleCorner.CornerRadius = UDim.new(0, 12)
     titleCorner.Parent = titleBar
     
+    -- Title Text
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(0.7, 0, 1, 0)
     title.BackgroundTransparency = 1
@@ -311,13 +272,14 @@ local function createUI()
         print("UI Closed")
     end)
     
-    -- Content
+    -- Content Frame
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, 0, 1, -35)
     contentFrame.Position = UDim2.new(0, 0, 0, 35)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = mainFrame
     
+    -- Subtitle
     local sub = Instance.new("TextLabel")
     sub.Size = UDim2.new(1, 0, 0, 20)
     sub.Position = UDim2.new(0, 0, 0, 5)
@@ -328,6 +290,7 @@ local function createUI()
     sub.Font = Enum.Font.Gotham
     sub.Parent = contentFrame
     
+    -- Weather Display
     weatherLabel = Instance.new("TextLabel")
     weatherLabel.Size = UDim2.new(1, 0, 0, 50)
     weatherLabel.Position = UDim2.new(0, 0, 0, 30)
@@ -342,6 +305,7 @@ local function createUI()
     wCorner.CornerRadius = UDim.new(0, 6)
     wCorner.Parent = weatherLabel
     
+    -- Status
     statusLabel = Instance.new("TextLabel")
     statusLabel.Size = UDim2.new(1, 0, 0, 20)
     statusLabel.Position = UDim2.new(0, 0, 0, 85)
@@ -352,6 +316,7 @@ local function createUI()
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = contentFrame
     
+    -- Toggle Detection
     toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0.85, 0, 0, 30)
     toggleBtn.Position = UDim2.new(0.075, 0, 0, 110)
@@ -373,6 +338,7 @@ local function createUI()
         if isDetecting then task.spawn(detectionLoop) end
     end)
     
+    -- Webhook Toggle
     webhookToggleBtn = Instance.new("TextButton")
     webhookToggleBtn.Size = UDim2.new(0.85, 0, 0, 28)
     webhookToggleBtn.Position = UDim2.new(0.075, 0, 0, 145)
@@ -391,6 +357,7 @@ local function createUI()
         webhookToggleBtn.BackgroundColor3 = webhookEnabled and Color3.fromRGB(30, 80, 30) or Color3.fromRGB(80, 30, 30)
     end)
     
+    -- Input Webhook
     local inputLabel = Instance.new("TextLabel")
     inputLabel.Size = UDim2.new(0.35, 0, 0, 20)
     inputLabel.Position = UDim2.new(0.05, 0, 0, 180)
@@ -415,6 +382,7 @@ local function createUI()
     inCorner.CornerRadius = UDim.new(0, 4)
     inCorner.Parent = inputBox
     
+    -- Set Button
     setBtn = Instance.new("TextButton")
     setBtn.Size = UDim2.new(0.4, 0, 0, 24)
     setBtn.Position = UDim2.new(0.55, 0, 0, 208)
@@ -440,6 +408,7 @@ local function createUI()
         end
     end)
     
+    -- Test Button
     testBtn = Instance.new("TextButton")
     testBtn.Size = UDim2.new(0.4, 0, 0, 24)
     testBtn.Position = UDim2.new(0.05, 0, 0, 208)
@@ -478,7 +447,7 @@ local function createUI()
         minimizeBtn.Text = isMinimized and "+" or "−"
     end)
     
-    -- Draggable (mouse + touch)
+    -- Draggable (Mouse + Touch)
     local drag = false
     local dragStart, startPos
     
@@ -513,10 +482,24 @@ local function createUI()
     titleBar.TouchEnded:Connect(function() endDrag() end)
     UserInputService.TouchMoved:Connect(function(input) moveDrag(input) end)
     
-    print("✅ UI created (Mobile friendly)")
+    print("✅ UI created successfully!")
 end
 
 -- ============================================================
 -- MAIN
 -- ============================================================
-p
+print("⚡ Fish It Elemental Weather Detector v8")
+print("🔥 Fire | 🧊 Ice | ⛈️ Storm | 🌌 Aurora | ☄️ Meteor | 🌫️ Fog")
+
+-- Coba buat UI dengan error handling
+local success, err = pcall(createUI)
+if not success then
+    warn("❌ Gagal membuat UI: " .. tostring(err))
+    print("⚠️ Coba jalankan ulang atau gunakan executor lain.")
+else
+    print("✅ UI muncul! Cari jendela di layar.")
+end
+
+-- Mulai deteksi
+isDetecting = true
+task.spawn
