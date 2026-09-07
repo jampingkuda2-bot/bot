@@ -1,185 +1,171 @@
 -- ============================================================
--- FISH IT - ELEMENTAL WEATHER DETECTOR v3
--- 3 Cuaca: Fire, Storm, Frost
--- UI dengan input webhook + test webhook
+-- FISH IT - WEATHER DETECTOR v5 (FIX WEBHOOK)
 -- ============================================================
 
 local player = game.Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Lighting = game:GetService("Lighting")
-local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+
+print("🚀 Weather Detector v5 Loading...")
 
 -- ============================================================
--- DEFAULT WEBHOOK (bisa kosong, diisi via UI)
+-- KONFIGURASI (GANTI DENGAN WEBHOOK KAMU)
 -- ============================================================
-local DEFAULT_WEBHOOK = ""  -- Biarkan kosong, user akan mengisi
+local WEBHOOK_URL = ""  -- Isi di sini atau lewat UI
 
 -- ============================================================
--- DATA 3 CUACA
+-- DATA CUACA
 -- ============================================================
 local weatherData = {
-    Fire = {
-        Name = "Fire",
-        Emoji = "🔥",
-        Description = "Meningkatkan damage dan kecepatan reel",
-        Color = 0xFF4400
-    },
-    Storm = {
-        Name = "Storm",
-        Emoji = "⛈️",
-        Description = "Meningkatkan luck dan reeling speed",
-        Color = 0xFFAA00
-    },
-    Frost = {
-        Name = "Frost",
-        Emoji = "❄️",
-        Description = "Menambahkan efek frozen, mengurangi kecepatan musuh",
-        Color = 0x88DDFF
-    }
+    Fire  = { Name = "Fire",  Emoji = "🔥", Color = Color3.fromRGB(255, 68, 0) },
+    Storm = { Name = "Storm", Emoji = "⛈️", Color = Color3.fromRGB(255, 170, 0) },
+    Frost = { Name = "Frost", Emoji = "❄️", Color = Color3.fromRGB(136, 221, 255) }
 }
 
 -- ============================================================
 -- VARIABEL
 -- ============================================================
 local currentWeather = nil
-local isDetecting = false
+local isDetecting = true
 local webhookEnabled = true
-local webhookURL = DEFAULT_WEBHOOK
+local webhookURL = WEBHOOK_URL
 
 -- ============================================================
--- FUNGSI DETEKSI
+-- DETEKSI WEATHER
 -- ============================================================
-local function detectFromReplicatedStorage()
-    for _, child in pairs(ReplicatedStorage:GetDescendants()) do
-        if child:IsA("StringValue") or child:IsA("ObjectValue") then
-            local val = child.Value
-            if type(val) == "string" then
-                local lower = val:lower()
-                for weatherName, _ in pairs(weatherData) do
-                    if lower:find(weatherName:lower()) then
-                        return weatherName
-                    end
-                end
-            end
+local function detectWeather()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Lighting = game:GetService("Lighting")
+    
+    for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("StringValue") or obj:IsA("ObjectValue") then
+            local val = tostring(obj.Value):lower()
+            if val:find("fire") then return "Fire"
+            elseif val:find("storm") then return "Storm"
+            elseif val:find("frost") then return "Frost" end
         end
     end
+    
+    for _, child in pairs(Lighting:GetChildren()) do
+        local name = child.Name:lower()
+        if name:find("fire") then return "Fire"
+        elseif name:find("storm") then return "Storm"
+        elseif name:find("frost") then return "Frost" end
+    end
+    
     return nil
-end
-
-local function detectFromLighting()
-    local sky = Lighting:FindFirstChild("Sky")
-    if sky then
-        for weatherName, _ in pairs(weatherData) do
-            if sky.Name and sky.Name:find(weatherName) then
-                return weatherName
-            end
-        end
-    end
-    local atmosphere = Lighting:FindFirstChild("Atmosphere")
-    if atmosphere then
-        for weatherName, _ in pairs(weatherData) do
-            if atmosphere.Name and atmosphere.Name:find(weatherName) then
-                return weatherName
-            end
-        end
-    end
-    return nil
-end
-
-local function detectFromRemote()
-    local net = ReplicatedStorage:FindFirstChild("Packages") and 
-                ReplicatedStorage.Packages:FindFirstChild("_Index") and
-                ReplicatedStorage.Packages._Index:FindFirstChild("sleitnick_net@0.2.0") and
-                ReplicatedStorage.Packages._Index["sleitnick_net@0.2.0"]:FindFirstChild("net")
-    if net then
-        local getWeather = net:FindFirstChild("RF/GetCurrentWeather") or 
-                           net:FindFirstChild("RF/GetWeather")
-        if getWeather and getWeather:IsA("RemoteFunction") then
-            local success, result = pcall(function()
-                return getWeather:InvokeServer()
-            end)
-            if success and result then
-                for weatherName, _ in pairs(weatherData) do
-                    if tostring(result):lower():find(weatherName:lower()) then
-                        return weatherName
-                    end
-                end
-            end
-        end
-    end
-    return nil
-end
-
-local function detectFromWorkspace()
-    for _, child in pairs(workspace:GetDescendants()) do
-        if child:IsA("ParticleEmitter") or child:IsA("Fire") or child:IsA("Smoke") then
-            local parentName = child.Parent and child.Parent.Name or ""
-            if parentName:lower():find("fire") then
-                return "Fire"
-            elseif parentName:lower():find("storm") or parentName:lower():find("lightning") then
-                return "Storm"
-            elseif parentName:lower():find("frost") or parentName:lower():find("ice") then
-                return "Frost"
-            end
-        end
-    end
-    return nil
-end
-
-local function getCurrentWeather()
-    local weather = detectFromRemote() or 
-                    detectFromReplicatedStorage() or 
-                    detectFromLighting() or
-                    detectFromWorkspace()
-    return weather
 end
 
 -- ============================================================
--- FUNGSI WEBHOOK (dengan test)
+-- FUNGSI REQUEST WEBHOOK (MULTI-METODE)
+-- ============================================================
+local function requestWebhook(url, data)
+    -- Metode 1: syn.request (Synapse X, Krnl, dll)
+    if syn and syn.request then
+        print("📤 Menggunakan syn.request...")
+        local response = syn.request({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+        return response
+    end
+    
+    -- Metode 2: http_request (beberapa executor)
+    if http_request then
+        print("📤 Menggunakan http_request...")
+        local response = http_request({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+        return response
+    end
+    
+    -- Metode 3: request (beberapa executor)
+    if request then
+        print("📤 Menggunakan request...")
+        local response = request({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+        return response
+    end
+    
+    -- Metode 4: HttpService (Roblox native, butuh proxy)
+    if HttpService and HttpService.PostAsync then
+        print("📤 Menggunakan HttpService.PostAsync...")
+        local response = HttpService:PostAsync(url, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
+        return { StatusCode = 200, Body = response }
+    end
+    
+    error("Tidak ada metode request yang tersedia!")
+end
+
+-- ============================================================
+-- FUNGSI KIRIM WEBHOOK
 -- ============================================================
 local function sendWebhook(weatherName, isTest)
-    if not webhookEnabled then return end
+    if not webhookEnabled then
+        print("⛔ Webhook disabled")
+        return false
+    end
+    
     if webhookURL == "" then
-        print("⚠️ Webhook URL belum diisi!")
-        return
+        print("⚠️ Webhook URL kosong! Set URL di UI.")
+        return false
+    end
+    
+    -- Validasi URL
+    if not webhookURL:find("discord.com/api/webhooks/") then
+        print("⚠️ URL webhook tidak valid! Pastikan URL Discord.")
+        return false
     end
     
     local weather = weatherData[weatherName]
-    if not weather and not isTest then return end
+    if not weather and not isTest then
+        print("⚠️ Cuaca tidak dikenal: " .. tostring(weatherName))
+        return false
+    end
     
-    local title = isTest and "🧪 Test Webhook" or "🌤️ Elemental Weather Change!"
-    local desc = isTest and "Webhook berhasil terhubung!" or 
-                 string.format("**Weather:** %s %s\n**Effect:** %s\n**Time:** %s",
-                 weather.Emoji, weather.Name, weather.Description, os.date("%Y-%m-%d %H:%M:%S"))
-    local color = isTest and 0x00FF00 or (weather and weather.Color or 0xFFFFFF)
-    
-    local data = {
-        ["content"] = "",
-        ["embeds"] = {{
-            ["title"] = title,
-            ["description"] = desc,
-            ["color"] = color,
-            ["footer"] = {
-                ["text"] = "Fish It Detector • " .. (isTest and "Test" or "Real-time")
-            }
+    -- Buat payload
+    local payload = {
+        embeds = {{
+            title = isTest and "🧪 Test Webhook" or "🌤️ Weather Change!",
+            description = isTest and "Webhook berhasil terhubung!" or 
+                          string.format("%s **%s** terdeteksi!", weather.Emoji, weather.Name),
+            color = isTest and 0x00FF00 or 0xFFAA00,
+            footer = { text = os.date("%Y-%m-%d %H:%M:%S") }
         }}
     }
     
+    print("📤 Mengirim webhook ke Discord...")
+    print("📝 Payload: " .. HttpService:JSONEncode(payload))
+    
     local success, response = pcall(function()
-        return syn and syn.request({
-            Url = webhookURL,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode(data)
-        })
+        return requestWebhook(webhookURL, payload)
     end)
     
-    if success then
-        print(isTest and "✅ Test webhook berhasil!" or "✅ Webhook terkirim: " .. weather.Name)
+    if success and response then
+        print("✅ Webhook berhasil dikirim!")
+        print("📊 Response status: " .. (response.StatusCode or "unknown"))
+        if response.Body then
+            print("📄 Response body: " .. tostring(response.Body))
+        end
         return true
     else
-        warn(isTest and "❌ Test webhook gagal!" or "❌ Gagal kirim webhook!")
+        print("❌ Gagal mengirim webhook!")
+        print("⚠️ Error: " .. tostring(response))
         return false
     end
 end
@@ -189,46 +175,50 @@ end
 -- ============================================================
 local function detectionLoop()
     while isDetecting do
-        local detected = getCurrentWeather()
+        local detected = detectWeather()
         if detected and detected ~= currentWeather then
             currentWeather = detected
-            print("🌤️ Weather changed to: " .. detected)
+            print("🌤️ Weather berubah: " .. detected)
             sendWebhook(detected)
-            updateWeatherDisplay(detected)
+            if weatherLabel then
+                local w = weatherData[detected]
+                weatherLabel.Text = w.Emoji .. " " .. w.Name
+                weatherLabel.TextColor3 = w.Color
+            end
         end
         task.wait(2)
     end
 end
 
 -- ============================================================
--- UI LENGKAP
+-- UI
 -- ============================================================
-local screenGui
-local mainFrame
-local weatherLabel
-local statusLabel
-local toggleBtn
-local webhookToggleBtn
-local webhookInput
-local setWebhookBtn
-local testWebhookBtn
+local screenGui, mainFrame, weatherLabel, statusLabel, toggleBtn, webhookToggleBtn, inputBox, setBtn, testBtn
 
 local function createUI()
+    print("🖥️ Creating UI...")
+    
     screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "WeatherDetector"
-    screenGui.Parent = player.PlayerGui
+    screenGui.Name = "WeatherUI"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+    screenGui.ResetOnSpawn = false
     
     mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 320, 0, 340)
-    mainFrame.Position = UDim2.new(0.5, -160, 0.5, -170)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-    mainFrame.BackgroundTransparency = 0.15
+    mainFrame.Size = UDim2.new(0, 320, 0, 300)
+    mainFrame.Position = UDim2.new(0.5, -160, 0.5, -150)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
+    mainFrame.BackgroundTransparency = 0
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 12)
     corner.Parent = mainFrame
+    
+    local border = Instance.new("UIStroke")
+    border.Color = Color3.fromRGB(80, 80, 150)
+    border.Thickness = 2
+    border.Parent = mainFrame
     
     -- Title
     local title = Instance.new("TextLabel")
@@ -240,27 +230,27 @@ local function createUI()
     title.Font = Enum.Font.GothamBold
     title.Parent = mainFrame
     
-    -- Subtitle
+    -- Sub
     local sub = Instance.new("TextLabel")
     sub.Size = UDim2.new(1, 0, 0, 20)
     sub.Position = UDim2.new(0, 0, 0, 30)
     sub.BackgroundTransparency = 1
-    sub.Text = "Fire • Storm • Frost"
-    sub.TextColor3 = Color3.fromRGB(150, 200, 255)
+    sub.Text = "🔥 Fire  ⛈️ Storm  ❄️ Frost"
+    sub.TextColor3 = Color3.fromRGB(180, 180, 220)
     sub.TextScaled = true
     sub.Font = Enum.Font.Gotham
     sub.Parent = mainFrame
     
-    -- Current Weather
+    -- Weather display
     weatherLabel = Instance.new("TextLabel")
-    weatherLabel.Size = UDim2.new(1, 0, 0, 45)
+    weatherLabel.Size = UDim2.new(1, 0, 0, 50)
     weatherLabel.Position = UDim2.new(0, 0, 0, 55)
-    weatherLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    weatherLabel.BackgroundTransparency = 0.5
+    weatherLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+    weatherLabel.BackgroundTransparency = 0
     weatherLabel.Text = "⏳ Detecting..."
     weatherLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     weatherLabel.TextScaled = true
-    weatherLabel.Font = Enum.Font.Gotham
+    weatherLabel.Font = Enum.Font.GothamBold
     weatherLabel.Parent = mainFrame
     
     local wCorner = Instance.new("UICorner")
@@ -270,20 +260,20 @@ local function createUI()
     -- Status
     statusLabel = Instance.new("TextLabel")
     statusLabel.Size = UDim2.new(1, 0, 0, 20)
-    statusLabel.Position = UDim2.new(0, 0, 0, 105)
+    statusLabel.Position = UDim2.new(0, 0, 0, 110)
     statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "🟢 Detecting Active"
+    statusLabel.Text = "🟢 Detecting"
     statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     statusLabel.TextScaled = true
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = mainFrame
     
-    -- Tombol Toggle Detection
+    -- Toggle detection
     toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0.85, 0, 0, 30)
-    toggleBtn.Position = UDim2.new(0.075, 0, 0, 130)
+    toggleBtn.Position = UDim2.new(0.075, 0, 0, 135)
     toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 30)
-    toggleBtn.Text = "⏹️ Stop Detection"
+    toggleBtn.Text = "⏹ Stop"
     toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     toggleBtn.TextScaled = true
     toggleBtn.Font = Enum.Font.Gotham
@@ -295,26 +285,19 @@ local function createUI()
     
     toggleBtn.MouseButton1Click:Connect(function()
         isDetecting = not isDetecting
-        if isDetecting then
-            toggleBtn.Text = "⏹️ Stop Detection"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 30)
-            statusLabel.Text = "🟢 Detecting Active"
-            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-            task.spawn(detectionLoop)
-        else
-            toggleBtn.Text = "▶️ Start Detection"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-            statusLabel.Text = "🔴 Detection Paused"
-            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end
+        toggleBtn.Text = isDetecting and "⏹ Stop" or "▶ Start"
+        toggleBtn.BackgroundColor3 = isDetecting and Color3.fromRGB(30, 80, 30) or Color3.fromRGB(80, 30, 30)
+        statusLabel.Text = isDetecting and "🟢 Detecting" or "🔴 Paused"
+        statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        if isDetecting then task.spawn(detectionLoop) end
     end)
     
-    -- Webhook Toggle
+    -- Webhook toggle
     webhookToggleBtn = Instance.new("TextButton")
     webhookToggleBtn.Size = UDim2.new(0.85, 0, 0, 28)
-    webhookToggleBtn.Position = UDim2.new(0.075, 0, 0, 165)
+    webhookToggleBtn.Position = UDim2.new(0.075, 0, 0, 170)
     webhookToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 30)
-    webhookToggleBtn.Text = "🔔 Webhook: ON"
+    webhookToggleBtn.Text = "🔔 Webhook ON"
     webhookToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     webhookToggleBtn.TextScaled = true
     webhookToggleBtn.Font = Enum.Font.Gotham
@@ -326,166 +309,148 @@ local function createUI()
     
     webhookToggleBtn.MouseButton1Click:Connect(function()
         webhookEnabled = not webhookEnabled
-        webhookToggleBtn.Text = webhookEnabled and "🔔 Webhook: ON" or "🔕 Webhook: OFF"
-        webhookToggleBtn.BackgroundColor3 = webhookEnabled and 
-            Color3.fromRGB(30, 80, 30) or Color3.fromRGB(80, 30, 30)
+        webhookToggleBtn.Text = webhookEnabled and "🔔 Webhook ON" or "🔕 Webhook OFF"
+        webhookToggleBtn.BackgroundColor3 = webhookEnabled and Color3.fromRGB(30, 80, 30) or Color3.fromRGB(80, 30, 30)
     end)
     
-    -- Input Webhook
+    -- Input webhook
     local inputLabel = Instance.new("TextLabel")
-    inputLabel.Size = UDim2.new(0.4, 0, 0, 20)
-    inputLabel.Position = UDim2.new(0.05, 0, 0, 200)
+    inputLabel.Size = UDim2.new(0.35, 0, 0, 20)
+    inputLabel.Position = UDim2.new(0.05, 0, 0, 205)
     inputLabel.BackgroundTransparency = 1
-    inputLabel.Text = "Webhook URL:"
+    inputLabel.Text = "Webhook:"
     inputLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     inputLabel.TextScaled = true
     inputLabel.Font = Enum.Font.Gotham
     inputLabel.Parent = mainFrame
     
-    webhookInput = Instance.new("TextBox")
-    webhookInput.Size = UDim2.new(0.6, 0, 0, 25)
-    webhookInput.Position = UDim2.new(0.35, 0, 0, 198)
-    webhookInput.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    webhookInput.Text = webhookURL
-    webhookInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-    webhookInput.TextScaled = true
-    webhookInput.Font = Enum.Font.Gotham
-    webhookInput.PlaceholderText = "https://discord.com/api/webhooks/..."
-    webhookInput.Parent = mainFrame
+    inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0.6, 0, 0, 24)
+    inputBox.Position = UDim2.new(0.35, 0, 0, 203)
+    inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    inputBox.Text = ""
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.TextScaled = true
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.PlaceholderText = "URL webhook"
+    inputBox.Parent = mainFrame
+    local inCorner = Instance.new("UICorner")
+    inCorner.CornerRadius = UDim.new(0, 4)
+    inCorner.Parent = inputBox
     
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 4)
-    inputCorner.Parent = webhookInput
-    
-    -- Tombol Set Webhook
-    setWebhookBtn = Instance.new("TextButton")
-    setWebhookBtn.Size = UDim2.new(0.4, 0, 0, 25)
-    setWebhookBtn.Position = UDim2.new(0.55, 0, 0, 230)
-    setWebhookBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 90)
-    setWebhookBtn.Text = "Set Webhook"
-    setWebhookBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    setWebhookBtn.TextScaled = true
-    setWebhookBtn.Font = Enum.Font.Gotham
-    setWebhookBtn.Parent = mainFrame
-    
+    -- Set button
+    setBtn = Instance.new("TextButton")
+    setBtn.Size = UDim2.new(0.4, 0, 0, 24)
+    setBtn.Position = UDim2.new(0.55, 0, 0, 233)
+    setBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 90)
+    setBtn.Text = "Set"
+    setBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    setBtn.TextScaled = true
+    setBtn.Font = Enum.Font.Gotham
+    setBtn.Parent = mainFrame
     local setCorner = Instance.new("UICorner")
     setCorner.CornerRadius = UDim.new(0, 4)
-    setCorner.Parent = setWebhookBtn
+    setCorner.Parent = setBtn
     
-    setWebhookBtn.MouseButton1Click:Connect(function()
-        local url = webhookInput.Text
+    setBtn.MouseButton1Click:Connect(function()
+        local url = inputBox.Text
         if url ~= "" then
             webhookURL = url
-            print("✅ Webhook URL disimpan!")
-        else
-            print("⚠️ URL tidak boleh kosong!")
+            statusLabel.Text = "✅ URL saved"
+            statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            print("🔗 Webhook URL diupdate: " .. webhookURL)
+            task.wait(1.5)
+            statusLabel.Text = isDetecting and "🟢 Detecting" or "🔴 Paused"
+            statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
         end
     end)
     
-    -- Tombol Test Webhook
-    testWebhookBtn = Instance.new("TextButton")
-    testWebhookBtn.Size = UDim2.new(0.4, 0, 0, 25)
-    testWebhookBtn.Position = UDim2.new(0.05, 0, 0, 230)
-    testWebhookBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 30)
-    testWebhookBtn.Text = "🧪 Test"
-    testWebhookBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    testWebhookBtn.TextScaled = true
-    testWebhookBtn.Font = Enum.Font.Gotham
-    testWebhookBtn.Parent = mainFrame
-    
+    -- Test button
+    testBtn = Instance.new("TextButton")
+    testBtn.Size = UDim2.new(0.4, 0, 0, 24)
+    testBtn.Position = UDim2.new(0.05, 0, 0, 233)
+    testBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 30)
+    testBtn.Text = "🧪 Test"
+    testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    testBtn.TextScaled = true
+    testBtn.Font = Enum.Font.Gotham
+    testBtn.Parent = mainFrame
     local testCorner = Instance.new("UICorner")
     testCorner.CornerRadius = UDim.new(0, 4)
-    testCorner.Parent = testWebhookBtn
+    testCorner.Parent = testBtn
     
-    testWebhookBtn.MouseButton1Click:Connect(function()
+    testBtn.MouseButton1Click:Connect(function()
         if webhookURL == "" then
-            print("⚠️ Set webhook URL terlebih dahulu!")
+            statusLabel.Text = "⚠️ Set URL first"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+            print("⚠️ Belum ada URL webhook")
+            task.wait(1.5)
+            statusLabel.Text = isDetecting and "🟢 Detecting" or "🔴 Paused"
             return
         end
-        print("📤 Mengirim test webhook...")
-        local success = sendWebhook(nil, true)
-        if success then
-            statusLabel.Text = "✅ Test berhasil!"
+        
+        print("🧪 Mengirim test webhook...")
+        statusLabel.Text = "📤 Sending..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        
+        local ok = sendWebhook(nil, true)
+        if ok then
+            statusLabel.Text = "✅ Test OK"
             statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-            task.wait(2)
-            statusLabel.Text = isDetecting and "🟢 Detecting Active" or "🔴 Detection Paused"
-            statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
         else
-            statusLabel.Text = "❌ Test gagal!"
+            statusLabel.Text = "❌ Test failed"
             statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-            task.wait(2)
-            statusLabel.Text = isDetecting and "🟢 Detecting Active" or "🔴 Detection Paused"
-            statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
         end
+        
+        task.wait(2)
+        statusLabel.Text = isDetecting and "🟢 Detecting" or "🔴 Paused"
+        statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
     end)
     
     -- Draggable
-    local dragging = false
+    local drag = false
     local dragStart, startPos
-    
-    mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
+    mainFrame.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            drag = true
+            dragStart = i.Position
             startPos = mainFrame.Position
         end
     end)
-    
-    mainFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
+    mainFrame.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = i.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
     
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
-function updateWeatherDisplay(weatherName)
-    local weather = weatherData[weatherName]
-    if weather then
-        weatherLabel.Text = string.format("%s %s", weather.Emoji, weather.Name)
-        weatherLabel.TextColor3 = Color3.fromRGB(
-            (weather.Color >> 16) & 0xFF,
-            (weather.Color >> 8) & 0xFF,
-            weather.Color & 0xFF
-        )
-    else
-        weatherLabel.Text = "❓ Unknown: " .. tostring(weatherName)
-    end
+    print("✅ UI created!")
 end
 
 -- ============================================================
--- INIT
+-- MAIN
 -- ============================================================
-print("🌤️ Fish It Elemental Weather Detector v3 Loaded!")
+print("🎣 Fish It Weather Detector v5")
 print("🔥 Fire | ⛈️ Storm | ❄️ Frost")
-print("📡 Mode: Detection Only | No Purchase")
-print("🔗 Masukkan webhook URL di UI dan klik 'Set Webhook'")
+
+pcall(createUI)
 
 isDetecting = true
 task.spawn(detectionLoop)
-task.spawn(createUI)
 
 -- Keybind W
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
     if input.KeyCode == Enum.KeyCode.W then
         isDetecting = not isDetecting
-        if isDetecting then
-            task.spawn(detectionLoop)
-        end
-        print("Detection: " .. (isDetecting and "ON" or "OFF"))
+        if isDetecting then task.spawn(detectionLoop) end
+        print("Detection:", isDetecting and "ON" or "OFF")
     end
 end)
 
-print("✅ Script siap! Tekan 'W' untuk toggle deteksi")
+print("✅ Script ready! Press W to toggle detection.")
+print("🔗 Masukkan URL webhook di UI, lalu klik Set dan Test.")
