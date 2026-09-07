@@ -1,5 +1,7 @@
 -- ============================================================
--- FISH IT - ELEMENTAL WEATHER DETECTOR v9 (UI SIMPLE)
+-- FISH IT - ELEMENTAL WEATHER DETECTOR v10 (FIXED UI)
+-- Fitur: Deteksi 6 cuaca elemental, Webhook Discord
+-- UI: Tidak bisa di-drag, tidak bisa di-minimize
 -- ============================================================
 
 local player = game.Players.LocalPlayer
@@ -9,7 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
-print("🚀 Weather Detector v9 Loading...")
+print("🚀 Weather Detector v10 Loading...")
 
 -- ============================================================
 -- KONFIGURASI WEBHOOK
@@ -17,7 +19,7 @@ print("🚀 Weather Detector v9 Loading...")
 local WEBHOOK_URL = ""  -- Isi di sini atau lewat UI
 
 -- ============================================================
--- DATA CUACA
+-- DATA CUACA (6 ELEMENTAL)
 -- ============================================================
 local weatherData = {
     Fire = { Name = "Fire", Emoji = "🔥", Color = Color3.fromRGB(255, 68, 0), Keywords = {"fire", "api", "flame", "lava"} },
@@ -37,7 +39,7 @@ local webhookEnabled = true
 local webhookURL = WEBHOOK_URL
 
 -- ============================================================
--- DETEKSI CUACA
+-- DETEKSI CUACA (OPTIMIZED)
 -- ============================================================
 local function detectWeather()
     local found = nil
@@ -118,8 +120,8 @@ local function sendWebhook(weatherName, isTest)
     
     local payload = {
         embeds = {{
-            title = isTest and "🧪 Test" or "⚡ Weather Change!",
-            description = isTest and "Webhook OK" or string.format("%s **%s** active", weather.Emoji, weather.Name),
+            title = isTest and "🧪 Test" or "⚡ Elemental Weather!",
+            description = isTest and "Webhook connected" or string.format("%s **%s** is active!", weather.Emoji, weather.Name),
             color = isTest and 0x00FF00 or 0xFFAA00,
             footer = { text = os.date("%H:%M:%S") }
         }}
@@ -160,29 +162,31 @@ local function detectionLoop()
 end
 
 -- ============================================================
--- UI SEDERHANA (PASTI MUNCUL)
+-- UI (TIDAK BISA DRAG, TIDAK BISA MINIMIZE)
 -- ============================================================
 local screenGui, mainFrame, weatherLabel, statusLabel, toggleBtn, webhookToggleBtn, inputBox, setBtn, testBtn
 
 local function createUI()
-    print("🖥️ Creating simple UI...")
+    print("🖥️ Creating UI (fixed position)...")
     
-    -- ScreenGui dengan background solid
+    -- ScreenGui
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "WeatherUI"
     screenGui.Parent = player:FindFirstChild("PlayerGui") or player
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Main Frame (warna solid)
+    -- Main Frame (tengah layar, tidak bisa digeser)
     mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 280, 0, 280)
-    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -140)
+    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -140)  -- Tetap di tengah
     mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
-    mainFrame.BackgroundTransparency = 0  -- SOLID
+    mainFrame.BackgroundTransparency = 0
     mainFrame.BorderSizePixel = 1
     mainFrame.BorderColor3 = Color3.fromRGB(100, 100, 200)
     mainFrame.Parent = screenGui
+    
+    -- Tidak ada event drag! UI tetap di posisi.
     
     -- Title
     local title = Instance.new("TextLabel")
@@ -217,7 +221,7 @@ local function createUI()
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = mainFrame
     
-    -- Toggle
+    -- Toggle Detection
     toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0.8, 0, 0, 30)
     toggleBtn.Position = UDim2.new(0.1, 0, 0, 105)
@@ -236,7 +240,7 @@ local function createUI()
         if isDetecting then task.spawn(detectionLoop) end
     end)
     
-    -- Webhook toggle
+    -- Webhook Toggle
     webhookToggleBtn = Instance.new("TextButton")
     webhookToggleBtn.Size = UDim2.new(0.8, 0, 0, 25)
     webhookToggleBtn.Position = UDim2.new(0.1, 0, 0, 140)
@@ -252,7 +256,7 @@ local function createUI()
         webhookToggleBtn.BackgroundColor3 = webhookEnabled and Color3.fromRGB(30, 80, 30) or Color3.fromRGB(80, 30, 30)
     end)
     
-    -- Input webhook
+    -- Input Webhook
     inputBox = Instance.new("TextBox")
     inputBox.Size = UDim2.new(0.8, 0, 0, 25)
     inputBox.Position = UDim2.new(0.1, 0, 0, 175)
@@ -312,45 +316,24 @@ local function createUI()
         statusLabel.TextColor3 = isDetecting and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
     end)
     
-    -- Draggable
-    local drag = false
-    local dragStart, startPos
-    mainFrame.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = true
-            dragStart = i.Position
-            startPos = mainFrame.Position
-        end
-    end)
-    mainFrame.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = i.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    
-    print("✅ UI created! Look for the window.")
+    print("✅ UI created (fixed position, no drag).")
 end
 
 -- ============================================================
 -- JALANKAN
 -- ============================================================
-print("⚡ Fish It Elemental Weather Detector v9")
+print("⚡ Fish It Elemental Weather Detector v10")
 print("🔥 Fire | 🧊 Ice | ⛈️ Storm | 🌌 Aurora | ☄️ Meteor | 🌫️ Fog")
 
 local success, err = pcall(createUI)
 if not success then
     warn("❌ UI Error: " .. tostring(err))
-    print("⚠️ Coba jalankan script test UI merah terlebih dahulu.")
 end
 
 isDetecting = true
 task.spawn(detectionLoop)
 
+-- Keybind W
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.W then
