@@ -76,6 +76,51 @@ function draggableStyle(offsets, locked) {
   };
 }
 
+function TitleBlock({ doc, align, plain, onDrag, locked }) {
+  const titleScale = doc.titleScale || 1;
+  const gap = doc.subtitleGap ?? 8;
+  const canDrag = !locked;
+
+  return (
+    <div
+      onPointerDown={onDrag}
+      title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
+      style={{
+        ...draggableStyle(
+          { x: doc.titleOffsetX, y: doc.titleOffsetY },
+          locked
+        ),
+        textAlign: align,
+      }}
+    >
+      <h1
+        style={{
+          fontSize: `${2 * titleScale}em`,
+          fontWeight: 800,
+          color: plain ? '#111827' : doc.accent,
+          margin: 0,
+          lineHeight: 1.15,
+        }}
+      >
+        {doc.title || ' '}
+      </h1>
+      {doc.subtitle && (
+        <p
+          style={{
+            margin: `${gap}px 0 0`,
+            color: '#6b7280',
+            whiteSpace: 'pre-wrap',
+            fontSize: '1em',
+            fontWeight: 400,
+          }}
+        >
+          {doc.subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function CoverPage({ doc, plain, update, zoom }) {
   const onDragTitle = useDrag('title', doc, update, zoom);
   const onDragLogo = useDrag('logo', doc, update, zoom);
@@ -84,6 +129,7 @@ function CoverPage({ doc, plain, update, zoom }) {
   const canDrag = !locked;
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
+  const gap = doc.subtitleGap ?? 8;
 
   return (
     <div
@@ -123,30 +169,45 @@ function CoverPage({ doc, plain, update, zoom }) {
       {!plain && (
         <div style={{ height: 6, width: 64, background: doc.accent, borderRadius: 4, marginBottom: 32 }} />
       )}
-      <h1
+
+      <div
         onPointerDown={onDragTitle}
         title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
         style={{
-          fontSize: `${2.8 * titleScale}em`,
-          fontWeight: 800,
-          color: plain ? '#111827' : '#0f172a',
-          margin: 0,
-          lineHeight: 1.15,
           ...draggableStyle(
             { x: doc.titleOffsetX, y: doc.titleOffsetY },
             locked
           ),
           alignSelf: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
           textAlign: align,
+          maxWidth: '100%',
         }}
       >
-        {doc.title || ' '}
-      </h1>
-      {doc.subtitle && (
-        <p style={{ marginTop: 16, fontSize: '1.15em', color: '#64748b', maxWidth: 520 }}>
-          {doc.subtitle}
-        </p>
-      )}
+        <h1
+          style={{
+            fontSize: `${2.8 * titleScale}em`,
+            fontWeight: 800,
+            color: plain ? '#111827' : '#0f172a',
+            margin: 0,
+            lineHeight: 1.15,
+          }}
+        >
+          {doc.title || ' '}
+        </h1>
+        {doc.subtitle && (
+          <p
+            style={{
+              margin: `${gap}px 0 0`,
+              fontSize: '1.15em',
+              color: '#64748b',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {doc.subtitle}
+          </p>
+        )}
+      </div>
+
       <div style={{ marginTop: 64, fontSize: '0.9em', color: '#64748b' }}>
         <div
           style={{
@@ -169,7 +230,6 @@ function ContentSections({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const locked = !!doc.locked;
   const canDrag = !locked;
-  const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
 
   return (
@@ -211,6 +271,7 @@ function ContentSections({ doc, plain, update, zoom }) {
                 height: logoSize,
                 maxWidth: logoSize * 2.4,
                 objectFit: 'contain',
+                flexShrink: 0,
                 ...draggableStyle(
                   { x: doc.logoOffsetX, y: doc.logoOffsetY },
                   locked
@@ -219,27 +280,13 @@ function ContentSections({ doc, plain, update, zoom }) {
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1
-              onPointerDown={onDragTitle}
-              title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
-              style={{
-                fontSize: `${2 * titleScale}em`,
-                fontWeight: 800,
-                color: plain ? '#111827' : doc.accent,
-                margin: 0,
-                lineHeight: 1.15,
-                textAlign: align,
-                ...draggableStyle(
-                  { x: doc.titleOffsetX, y: doc.titleOffsetY },
-                  locked
-                ),
-              }}
-            >
-              {doc.title || ' '}
-            </h1>
-            {doc.subtitle && (
-              <p style={{ margin: '8px 0 0', color: '#6b7280' }}>{doc.subtitle}</p>
-            )}
+            <TitleBlock
+              doc={doc}
+              align={align}
+              plain={plain}
+              onDrag={onDragTitle}
+              locked={locked}
+            />
             <div
               style={{
                 marginTop: 14,
