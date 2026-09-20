@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   PAGE_SIZES, buildInitialDoc, normalizeDoc, uid,
+  createTextSection, createTableSection,
   STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug,
 } from './lib/constants';
 import { exportPdf } from './lib/pdf';
@@ -56,20 +57,13 @@ export default function Home() {
     return { ...d, sections: s };
   });
 
-  const addSection = () => {
+  const addSection = (type = 'text') => {
     setDoc((d) => ({
       ...d,
-      sections: [...d.sections, {
-        id: uid(),
-        heading: 'Bagian Baru',
-        body: '',
-        align: 'left',
-        breakBefore: false,
-        offsetX: 0,
-        offsetY: 0,
-        fontFamily: '',
-        fontSize: 0,
-      }],
+      sections: [
+        ...d.sections,
+        type === 'table' ? createTableSection() : createTextSection(),
+      ],
     }));
     setFocusLast((v) => v + 1);
   };
