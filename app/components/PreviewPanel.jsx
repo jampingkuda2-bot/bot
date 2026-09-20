@@ -5,7 +5,7 @@ import { Eye, ZoomIn, ZoomOut, ChevronsUpDown } from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
 
-export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, previewRef }) {
+export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
   const page = PAGE_SIZES[doc.pageSize];
   const isL = doc.orientation === 'landscape';
   const mmW = isL ? page.mmH : page.mmW;
@@ -113,7 +113,7 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
             }}
           >
             <Watermark text={doc.watermark} />
-            <DocBody doc={doc} />
+            <DocBody doc={doc} update={update} zoom={zoom} />
           </div>
         </div>
       </div>
