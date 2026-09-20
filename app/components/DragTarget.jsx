@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Trash2,
 } from 'lucide-react';
@@ -20,7 +20,9 @@ export default function DragTarget({
   nudgeStep = 4,
 }) {
   const [hovered, setHovered] = useState(false);
+  const [tapped, setTapped] = useState(false);
   const draggingRef = useRef(false);
+  const wrapperRef = useRef(null);
   const locked = !!doc.locked;
 
   const xKey = id + 'OffsetX';
@@ -28,10 +30,25 @@ export default function DragTarget({
   const offsetX = doc[xKey] || 0;
   const offsetY = doc[yKey] || 0;
 
+  // Hide toolbar saat tap di luar elemen
+  useEffect(() => {
+    if (!tapped) return;
+    const onDown = (e) => {
+      if (!wrapperRef.current) return;
+      if (wrapperRef.current.contains(e.target)) return;
+      setTapped(false);
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [tapped]);
+
   const onPointerDown = useCallback((e) => {
     if (locked) return;
     if (e.button !== undefined && e.button !== 0) return;
     if (e.target.closest && e.target.closest('[data-toolbar]')) return;
+
+    // Tampilkan toolbar saat tap/klik (kunci untuk HP)
+    setTapped(true);
 
     e.preventDefault();
     e.stopPropagation();
@@ -42,7 +59,6 @@ export default function DragTarget({
     const origX = doc[xKey] || 0;
     const origY = doc[yKey] || 0;
     const scale = zoom || 1;
-    document.body.style.userSelect = 'none';
 
     const move = (ev) => {
       if (!draggingRef.current) return;
@@ -56,7 +72,6 @@ export default function DragTarget({
 
     const up = () => {
       draggingRef.current = false;
-      document.body.style.userSelect = '';
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
@@ -75,12 +90,14 @@ export default function DragTarget({
   const resetPos = () => update({ [xKey]: 0, [yKey]: 0 });
 
   const currentAlign = alignKey ? doc[alignKey] : null;
-  const showToolbar = hovered && !locked;
+  const showToolbar = (hovered || tapped) && !locked;
+  const active = hovered || tapped;
 
   const btn = 'p-1.5 hover:bg-white/15 rounded transition';
 
   return (
     <div
+      ref={wrapperRef}
       data-draggable={id}
       onPointerDown={onPointerDown}
       onMouseEnter={() => setHovered(true)}
@@ -89,10 +106,14 @@ export default function DragTarget({
       style={{
         cursor: locked ? 'default' : 'move',
         touchAction: locked ? 'auto' : 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
         transform: `translate(${offsetX}px, ${offsetY}px)`,
-        outline: hovered && !locked ? '1px dashed rgba(37,99,235,0.5)' : 'none',
+        outline: active && !locked ? '1px dashed rgba(37,99,235,0.5)' : 'none',
         outlineOffset: 4,
         borderRadius: 4,
+        minWidth: 40,
+        minHeight: 20,
         ...style,
       }}
     >
@@ -100,16 +121,18 @@ export default function DragTarget({
         <div
           data-toolbar
           onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onMouseEnter={() => setHovered(true)}
           style={{
             position: 'absolute',
-            top: `${-40 / zoom}px`,
+            top: `${-42 / zoom}px`,
             left: '50%',
             transform: `translateX(-50%) scale(${1 / zoom})`,
             transformOrigin: 'bottom center',
             zIndex: 50,
             whiteSpace: 'nowrap',
           }}
-          className="flex items-center gap-0.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg px-1 py-0.5 shadow-2xl"
+          className="flex items-center gap-0.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg px-1.5 py-1 shadow-2xl"
         >
           <button onClick={() => nudge(-nudgeStep, 0)} className={btn} title="Geser kiri">
             <ChevronLeft className="w-3 h-3" />
@@ -129,13 +152,13 @@ export default function DragTarget({
               <span className="w-px h-3 bg-white/25 mx-0.5" />
               {alignOptions.map((opt) => {
                 const Icon = opt.icon;
-                const active = currentAlign === opt.value;
+                const isActive = currentAlign === opt.value;
                 return (
                   <button
                     key={opt.value}
                     onClick={() => update({ [alignKey]: opt.value })}
                     className={`p-1.5 rounded transition ${
-                      active ? 'bg-white/25' : 'hover:bg-white/15'
+                      isActive ? 'bg-white/25' : 'hover:bg-white/15'
                     }`}
                     title={opt.title}
                   >
