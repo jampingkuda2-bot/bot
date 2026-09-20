@@ -76,47 +76,46 @@ function draggableStyle(offsets, locked) {
   };
 }
 
-function TitleBlock({ doc, align, plain, onDrag, locked }) {
-  const titleScale = doc.titleScale || 1;
-  const gap = doc.subtitleGap ?? 8;
-  const canDrag = !locked;
+function AuthorBlock({ doc, titleAlign, plain }) {
+  const authorAlign = doc.authorAlign || 'split';
+  const authorColor = plain ? '#111827' : '#9ca3af';
+
+  if (authorAlign === 'split') {
+    return (
+      <div
+        style={{
+          marginTop: 14,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 16,
+          fontSize: '0.82em',
+          color: authorColor,
+        }}
+      >
+        <span style={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}>
+          {doc.author}
+        </span>
+        <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+          {doc.date}
+        </span>
+      </div>
+    );
+  }
+
+  const resolved = authorAlign === 'title' ? titleAlign : authorAlign;
 
   return (
     <div
-      onPointerDown={onDrag}
-      title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
       style={{
-        ...draggableStyle(
-          { x: doc.titleOffsetX, y: doc.titleOffsetY },
-          locked
-        ),
-        textAlign: align,
+        marginTop: 14,
+        fontSize: '0.82em',
+        color: authorColor,
+        textAlign: resolved,
       }}
     >
-      <h1
-        style={{
-          fontSize: `${2 * titleScale}em`,
-          fontWeight: 800,
-          color: plain ? '#111827' : doc.accent,
-          margin: 0,
-          lineHeight: 1.15,
-        }}
-      >
-        {doc.title || ' '}
-      </h1>
-      {doc.subtitle && (
-        <p
-          style={{
-            margin: `${gap}px 0 0`,
-            color: '#6b7280',
-            whiteSpace: 'pre-wrap',
-            fontSize: '1em',
-            fontWeight: 400,
-          }}
-        >
-          {doc.subtitle}
-        </p>
-      )}
+      <div style={{ whiteSpace: 'pre-wrap' }}>{doc.author}</div>
+      <div style={{ marginTop: 2 }}>{doc.date}</div>
     </div>
   );
 }
@@ -208,17 +207,19 @@ function CoverPage({ doc, plain, update, zoom }) {
         )}
       </div>
 
-      <div style={{ marginTop: 64, fontSize: '0.9em', color: '#64748b' }}>
-        <div
-          style={{
-            fontWeight: 600,
-            color: plain ? '#111827' : '#334155',
-            whiteSpace: 'pre-wrap',
-          }}
-        >
-          {doc.author}
+      <div style={{ marginTop: 64, fontSize: '0.9em', color: '#64748b', width: '100%' }}>
+        <div style={{ textAlign: align }}>
+          <div
+            style={{
+              fontWeight: 600,
+              color: plain ? '#111827' : '#334155',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {doc.author}
+          </div>
+          <div>{doc.date}</div>
         </div>
-        <div>{doc.date}</div>
       </div>
     </div>
   );
@@ -231,6 +232,7 @@ function ContentSections({ doc, plain, update, zoom }) {
   const locked = !!doc.locked;
   const canDrag = !locked;
   const logoSize = doc.logoSize || 56;
+  const gap = doc.subtitleGap ?? 8;
 
   return (
     <>
@@ -280,31 +282,41 @@ function ContentSections({ doc, plain, update, zoom }) {
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <TitleBlock
-              doc={doc}
-              align={align}
-              plain={plain}
-              onDrag={onDragTitle}
-              locked={locked}
-            />
             <div
+              onPointerDown={onDragTitle}
+              title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
               style={{
-                marginTop: 14,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: 16,
-                fontSize: '0.82em',
-                color: plain ? '#111827' : '#9ca3af',
+                ...draggableStyle(
+                  { x: doc.titleOffsetX, y: doc.titleOffsetY },
+                  locked
+                ),
+                textAlign: align,
               }}
             >
-              <span style={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}>
-                {doc.author}
-              </span>
-              <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                {doc.date}
-              </span>
+              <h1
+                style={{
+                  fontSize: `${2 * (doc.titleScale || 1)}em`,
+                  fontWeight: 800,
+                  color: plain ? '#111827' : doc.accent,
+                  margin: 0,
+                  lineHeight: 1.15,
+                }}
+              >
+                {doc.title || ' '}
+              </h1>
+              {doc.subtitle && (
+                <p
+                  style={{
+                    margin: `${gap}px 0 0`,
+                    color: '#6b7280',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {doc.subtitle}
+                </p>
+              )}
             </div>
+            <AuthorBlock doc={doc} titleAlign={align} plain={plain} />
           </div>
         </header>
       )}
