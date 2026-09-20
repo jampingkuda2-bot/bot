@@ -30,7 +30,6 @@ export default function DragTarget({
   const offsetX = doc[xKey] || 0;
   const offsetY = doc[yKey] || 0;
 
-  // Hide toolbar saat tap di luar elemen
   useEffect(() => {
     if (!tapped) return;
     const onDown = (e) => {
@@ -47,9 +46,7 @@ export default function DragTarget({
     if (e.button !== undefined && e.button !== 0) return;
     if (e.target.closest && e.target.closest('[data-toolbar]')) return;
 
-    // Tampilkan toolbar saat tap/klik (kunci untuk HP)
     setTapped(true);
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -108,6 +105,7 @@ export default function DragTarget({
         touchAction: locked ? 'auto' : 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
         transform: `translate(${offsetX}px, ${offsetY}px)`,
         outline: active && !locked ? '1px dashed rgba(37,99,235,0.5)' : 'none',
         outlineOffset: 4,
@@ -117,6 +115,10 @@ export default function DragTarget({
         ...style,
       }}
     >
+      <div style={{ pointerEvents: 'none' }}>
+        {children}
+      </div>
+
       {showToolbar && (
         <div
           data-toolbar
@@ -131,6 +133,7 @@ export default function DragTarget({
             transformOrigin: 'bottom center',
             zIndex: 50,
             whiteSpace: 'nowrap',
+            pointerEvents: 'auto',
           }}
           className="flex items-center gap-0.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg px-1.5 py-1 shadow-2xl"
         >
@@ -185,7 +188,6 @@ export default function DragTarget({
           )}
         </div>
       )}
-      {children}
     </div>
   );
 }
