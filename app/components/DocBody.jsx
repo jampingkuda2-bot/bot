@@ -43,6 +43,14 @@ export default function DocBody({ doc, update, zoom = 1 }) {
   return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />;
 }
 
+function hasTitle(doc) {
+  return !!(doc.title && doc.title.trim()) || !!(doc.subtitle && doc.subtitle.trim());
+}
+
+function hasAuthor(doc) {
+  return !!(doc.author && doc.author.trim()) || !!(doc.date && doc.date.trim());
+}
+
 function LogoImg({ doc, update, zoom, size }) {
   return (
     <DragTarget
@@ -71,6 +79,7 @@ function LogoImg({ doc, update, zoom, size }) {
 }
 
 function TitleBlock({ doc, update, zoom, plain, size, align }) {
+  if (!hasTitle(doc)) return null;
   const gap = doc.subtitleGap ?? 8;
   return (
     <DragTarget
@@ -93,7 +102,7 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
           lineHeight: 1.15,
         }}
       >
-        {doc.title || ' '}
+        {doc.title || ''}
       </h1>
       {doc.subtitle && (
         <p
@@ -113,6 +122,7 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
 }
 
 function AuthorBlock({ doc, update, zoom }) {
+  if (!hasAuthor(doc)) return null;
   const align = doc.authorAlign || 'split';
   const size = doc.authorFontSize || 0.82;
   const fam = doc.authorFontFamily || 'inherit';
@@ -147,16 +157,16 @@ function AuthorBlock({ doc, update, zoom }) {
           }}
         >
           <span style={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}>
-            {doc.author || ' '}
+            {doc.author || ''}
           </span>
           <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-            {doc.date || ' '}
+            {doc.date || ''}
           </span>
         </div>
       ) : (
         <div style={{ textAlign: align }}>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{doc.author || ' '}</div>
-          <div style={{ marginTop: 2 }}>{doc.date || ' '}</div>
+          <div style={{ whiteSpace: 'pre-wrap' }}>{doc.author || ''}</div>
+          <div style={{ marginTop: 2 }}>{doc.date || ''}</div>
         </div>
       )}
     </DragTarget>
@@ -167,7 +177,6 @@ function CoverPage({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
-  const gap = doc.subtitleGap ?? 8;
 
   return (
     <div
@@ -203,40 +212,14 @@ function CoverPage({ doc, plain, update, zoom }) {
         />
       )}
       <div style={{ width: '100%' }}>
-        <DragTarget
-          id="title"
+        <TitleBlock
           doc={doc}
           update={update}
           zoom={zoom}
-          alignKey="titleAlign"
-          alignOptions={TITLE_ALIGN_OPTS}
-          style={{ textAlign: align, width: '100%' }}
-          onDelete={() => update({ title: '', subtitle: '' })}
-        >
-          <h1
-            style={{
-              fontSize: `${2.8 * titleScale}em`,
-              fontWeight: 800,
-              color: plain ? '#111827' : '#0f172a',
-              margin: 0,
-              lineHeight: 1.15,
-            }}
-          >
-            {doc.title || ' '}
-          </h1>
-          {doc.subtitle && (
-            <p
-              style={{
-                margin: `${gap}px 0 0`,
-                fontSize: '1.15em',
-                color: SUBTITLE_COLOR,
-                whiteSpace: 'pre-wrap',
-              }}
-            >
-              {doc.subtitle}
-            </p>
-          )}
-        </DragTarget>
+          plain={plain}
+          size={2.8 * titleScale}
+          align={align}
+        />
       </div>
       <div style={{ marginTop: 64, width: '100%' }}>
         <AuthorBlock doc={doc} update={update} zoom={zoom} />
@@ -248,6 +231,7 @@ function CoverPage({ doc, plain, update, zoom }) {
 function ContentSections({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const logoSize = doc.logoSize || 56;
+  const showHeader = doc.logo || hasTitle(doc) || hasAuthor(doc);
 
   return (
     <>
@@ -266,7 +250,7 @@ function ContentSections({ doc, plain, update, zoom }) {
         </div>
       )}
 
-      {!doc.showCover && (
+      {!doc.showCover && showHeader && (
         <header
           data-block
           style={{
