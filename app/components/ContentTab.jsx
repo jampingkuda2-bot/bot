@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { Group, Field, TextInput, Toggle } from './ui';
 import SectionCard from './SectionCard';
+import { FONTS } from '../lib/constants';
 
 export default function ContentTab({
   doc, update, updateSection, addSection,
@@ -16,6 +17,7 @@ export default function ContentTab({
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
   const subtitleGap = doc.subtitleGap ?? 8;
+  const authorFontSize = doc.authorFontSize || 0.82;
 
   return (
     <>
@@ -29,20 +31,19 @@ export default function ContentTab({
           }`}
         >
           {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          {locked ? 'Terkunci — klik untuk buka' : 'Kunci posisi judul, logo & penulis'}
+          {locked ? 'Terkunci — klik untuk buka' : 'Kunci judul, logo & penulis'}
         </button>
         {locked && (
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
-            🔒 Semua elemen terkunci. Tidak bisa digeser tidak sengaja.
+            🔒 Semua elemen terkunci.
           </p>
         )}
       </div>
 
       <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 p-3 mb-4">
         <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-          💡 <b>Tips:</b> Geser judul, logo, atau penulis <b>langsung di preview</b>.
-          Arahkan kursor ke elemen → muncul toolbar untuk <b>geser halus (&lt; &gt;)</b>,
-          <b> rata kanan/kiri/tengah</b>, dan <b>reset</b>.
+          💡 <b>Tips:</b> <b>Tap</b> judul, logo, atau penulis di preview → muncul
+          toolbar untuk geser (<b>&lt; &gt; ^ v</b>), atur perataan, reset, atau hapus.
         </p>
       </div>
 
@@ -77,7 +78,7 @@ export default function ContentTab({
           <textarea
             value={doc.subtitle || ''}
             onChange={(e) => update({ subtitle: e.target.value })}
-            placeholder="Subjudul atau deskripsi singkat (bisa Enter untuk baris baru)"
+            placeholder="Subjudul (bisa Enter untuk baris baru)"
             rows={2}
             className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
           />
@@ -104,6 +105,31 @@ export default function ContentTab({
             placeholder="Nama penulis (bisa Enter untuk baris baru)"
             rows={2}
             className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
+          />
+        </Field>
+
+        <Field label="Font Penulis">
+          <select
+            value={doc.authorFontFamily || ''}
+            onChange={(e) => update({ authorFontFamily: e.target.value })}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+          >
+            <option value="">Sama dengan dokumen</option>
+            {FONTS.map((f) => (
+              <option key={f.label} value={f.value}>{f.label}</option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label={`Ukuran Penulis — ${Math.round(authorFontSize * 100)}%`}>
+          <input
+            type="range"
+            min={0.5}
+            max={1.6}
+            step={0.02}
+            value={authorFontSize}
+            onChange={(e) => update({ authorFontSize: Number(e.target.value) })}
+            className="w-full"
           />
         </Field>
 
