@@ -26,6 +26,7 @@ export default function SectionCard({
         type: 'table',
         tableData: section.tableData || {
           headerRow: true,
+          numbering: true,
           rows: [['Kolom A', 'Kolom B', 'Kolom C'], ['', '', ''], ['', '', '']],
         },
       });
@@ -72,7 +73,6 @@ export default function SectionCard({
 
       {open && (
         <div className="px-3 pb-3 space-y-3">
-          {/* Type toggle */}
           <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
             <button
               onClick={() => changeType('text')}
@@ -98,14 +98,12 @@ export default function SectionCard({
             </button>
           </div>
 
-          {/* Heading — selalu ada */}
           <TextInput
             value={section.heading}
             onChange={(v) => onChange({ heading: v })}
             placeholder={isTable ? 'Judul tabel' : 'Judul bagian'}
           />
 
-          {/* Body atau Table */}
           {!isTable ? (
             <textarea
               value={section.body}
@@ -121,7 +119,6 @@ export default function SectionCard({
             />
           )}
 
-          {/* Font & Size */}
           <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 p-2.5 space-y-2.5">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-neutral-500">
               <Type className="w-3 h-3" />
@@ -173,7 +170,6 @@ export default function SectionCard({
             </div>
           </div>
 
-          {/* Align + break */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
               {[
@@ -218,6 +214,7 @@ export default function SectionCard({
 function TableEditor({ tableData, onChange }) {
   const rows = tableData?.rows || [['', '', '']];
   const headerRow = tableData?.headerRow !== false;
+  const numbering = tableData?.numbering !== false;
 
   const colCount = rows[0]?.length || 0;
 
@@ -249,46 +246,63 @@ function TableEditor({ tableData, onChange }) {
 
   return (
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2 space-y-2">
-      {/* Toolbar atas */}
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex items-center justify-between gap-1 flex-wrap">
         <span className="text-[10px] text-neutral-500">
           {rows.length} baris × {colCount} kolom
         </span>
-        <label className="flex items-center gap-1 text-[10px] text-neutral-500 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={headerRow}
-            onChange={(e) => onChange({ headerRow: e.target.checked })}
-            className="accent-blue-600"
-          />
-          Baris header
-        </label>
-      </div>
-
-      {/* Grid input — scroll horizontal kalau banyak kolom */}
-      <div className="overflow-x-auto -mx-1 px-1">
-        <div className="space-y-1" style={{ minWidth: Math.max(220, colCount * 72) }}>
-          {rows.map((row, ri) => (
-            <div key={ri} className="flex gap-1">
-              {row.map((cell, ci) => (
-                <input
-                  key={ci}
-                  value={cell}
-                  onChange={(e) => updateCell(ri, ci, e.target.value)}
-                  placeholder={headerRow && ri === 0 ? `H${ci + 1}` : ''}
-                  className={`flex-1 min-w-0 px-1.5 py-1 text-[11px] rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500 ${
-                    headerRow && ri === 0
-                      ? 'font-semibold bg-neutral-50 dark:bg-neutral-800/50'
-                      : ''
-                  }`}
-                />
-              ))}
-            </div>
-          ))}
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1 text-[10px] text-neutral-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={headerRow}
+              onChange={(e) => onChange({ headerRow: e.target.checked })}
+              className="accent-blue-600"
+            />
+            Header
+          </label>
+          <label className="flex items-center gap-1 text-[10px] text-neutral-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={numbering}
+              onChange={(e) => onChange({ numbering: e.target.checked })}
+              className="accent-blue-600"
+            />
+            Nomor
+          </label>
         </div>
       </div>
 
-      {/* Toolbar bawah — tambah/hapus */}
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="space-y-1" style={{ minWidth: Math.max(220, colCount * 72) }}>
+          {rows.map((row, ri) => {
+            const isHeader = headerRow && ri === 0;
+            const dataIndex = headerRow ? ri - 1 : ri;
+            return (
+              <div key={ri} className="flex gap-1 items-center">
+                {numbering && (
+                  <span className={`w-5 text-[10px] text-center shrink-0 ${
+                    isHeader ? 'text-neutral-400' : 'text-neutral-500'
+                  }`}>
+                    {isHeader ? '#' : dataIndex + 1}
+                  </span>
+                )}
+                {row.map((cell, ci) => (
+                  <input
+                    key={ci}
+                    value={cell}
+                    onChange={(e) => updateCell(ri, ci, e.target.value)}
+                    placeholder={isHeader ? `H${ci + 1}` : ''}
+                    className={`flex-1 min-w-0 px-1.5 py-1 text-[11px] rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500 ${
+                      isHeader ? 'font-semibold bg-neutral-50 dark:bg-neutral-800/50' : ''
+                    }`}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-1.5">
         <button
           onClick={addRow}
