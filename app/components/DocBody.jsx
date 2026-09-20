@@ -1,6 +1,9 @@
+'use client';
+
+import { useRef, useCallback } from 'react';
 import { PAGE_SIZES } from '../lib/constants';
 
-export default function DocBody({ doc }) {
+export default function DocBody({ doc, update, zoom = 1 }) {
   const isPlain = !!doc.plain;
   const d = isPlain
     ? { ...doc, accent: '#111827', headingStyle: 'plain' }
@@ -10,7 +13,7 @@ export default function DocBody({ doc }) {
   if (d.showCover) {
     return (
       <>
-        <CoverPage doc={d} plain={isPlain} />
+        <CoverPage doc={d} plain={isPlain} update={update} zoom={zoom} />
         <div style={{ padding: p, position: 'relative' }}>
           <ContentSections doc={d} plain={isPlain} />
         </div>
@@ -18,10 +21,55 @@ export default function DocBody({ doc }) {
     );
   }
 
-  return <ContentSections doc={d} plain={isPlain} />;
+  return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />;
 }
 
-function CoverPage({ doc, plain }) {
+function useDragTitle(doc, update, zoom) {
+  const draggingRef = useRef(false);
+
+  const onPointerDown = useCallback((e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    draggingRef.current = true;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = doc.titleOffsetX || 0;
+    const origY = doc.titleOffsetY || 0;
+    const scale = zoom || 1;
+    document.body.style.userSelect = 'none';
+
+    const move = (ev) => {
+      if (!draggingRef.current) return;
+      const dx = (ev.clientX - startX) / scale;
+      const dy = (ev.clientY - startY) / scale;
+      update({
+        titleOffsetX: Math.round(origX + dx),
+        titleOffsetY: Math.round(origY + dy),
+      });
+    };
+
+    const up = () => {
+      draggingRef.current = false;
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }, [doc.titleOffsetX, doc.titleOffsetY, update, zoom]);
+
+  return onPointerDown;
+}
+
+function CoverPage({ doc, plain, update, zoom }) {
+  const onPointerDown = useDragTitle(doc, update, zoom);
+  const align = doc.titleAlign || 'left';
+
   return (
     <div
       data-block
@@ -32,7 +80,7 @@ function CoverPage({ doc, plain }) {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        textAlign: 'center',
+        textAlign: align === 'left' ? 'left' : align === 'right' ? 'right' : 'center',
         background: plain
           ? '#ffffff'
           : `linear-gradient(135deg, ${doc.accent}10 0%, ${doc.accent}00 60%)`,
@@ -50,12 +98,20 @@ function CoverPage({ doc, plain }) {
         <div style={{ height: 6, width: 64, background: doc.accent, borderRadius: 4, marginBottom: 32 }} />
       )}
       <h1
+        onPointerDown={onPointerDown}
+        title="Geser judul untuk memindahkan"
         style={{
           fontSize: '2.8em',
           fontWeight: 800,
           color: plain ? '#111827' : '#0f172a',
           margin: 0,
           lineHeight: 1.15,
+          cursor: 'move',
+          touchAction: 'none',
+          transform: `translate(${doc.titleOffsetX || 0}px, ${doc.titleOffsetY || 0}px)`,
+          transition: 'none',
+          alignSelf: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
+          textAlign: align,
         }}
       >
         {doc.title || ' '}
@@ -81,7 +137,10 @@ function CoverPage({ doc, plain }) {
   );
 }
 
-function ContentSections({ doc, plain }) {
+function ContentSections({ doc, plain, update, zoom }) {
+  const onPointerDown = useDragTitle(doc, update, zoom);
+  const align = doc.titleAlign || 'left';
+
   return (
     <>
       {doc.headerText && (
@@ -120,12 +179,18 @@ function ContentSections({ doc, plain }) {
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1
+              onPointerDown={onPointerDown}
+              title="Geser judul untuk memindahkan"
               style={{
                 fontSize: '2em',
                 fontWeight: 800,
                 color: plain ? '#111827' : doc.accent,
                 margin: 0,
                 lineHeight: 1.15,
+                cursor: 'move',
+                touchAction: 'none',
+                textAlign: align,
+                transform: `translate(${doc.titleOffsetX || 0}px, ${doc.titleOffsetY || 0}px)`,
               }}
             >
               {doc.title || ' '}
