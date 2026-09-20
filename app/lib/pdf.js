@@ -1,5 +1,7 @@
 import { PAGE_SIZES, slug } from './constants';
 
+const PAGE_NUMBER_RESERVE_MM = 8;
+
 export async function exportPdf(el, doc, onProgress) {
   onProgress?.('Menyiapkan…');
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -31,31 +33,41 @@ export async function exportPdf(el, doc, onProgress) {
 
   const imgW = pageWmm;
   const imgH = (canvas.height * imgW) / canvas.width;
-  const usableH = pageHmm - (doc.showPageNumbers ? 8 : 0);
+
+  const reserveMm = doc.showPageNumbers ? PAGE_NUMBER_RESERVE_MM : 0;
+  const usableH = pageHmm - reserveMm;
+  const contentMm = Math.max(1, imgH - reserveMm);
+
+  const pages = Math.max(1, Math.ceil(contentMm / usableH));
+
+  const pxPerMm = canvas.height / imgH;
+  const contentPx = Math.max(1, canvas.height - reserveMm * pxPerMm);
 
   onProgress?.('Menyusun…');
-  if (imgH <= usableH) {
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, imgH);
+  if (pages === 1) {
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, contentMm);
   } else {
-    const pageHeightPx = Math.floor((usableH / imgH) * canvas.height);
-    let y = 0, pageIdx = 0;
-    while (y < canvas.height) {
-      const sliceH = Math.min(pageHeightPx, canvas.height - y);
+    const pageHeightPx = usableH * pxPerMm;
+    let y = 0;
+    for (let i = 0; i < pages; i++) {
+      const remaining = contentPx - y;
+      if (remaining <= 0) break;
+
+      const slicePx = Math.min(Math.ceil(pageHeightPx), remaining);
       const c = document.createElement('canvas');
       c.width = canvas.width;
-      c.height = sliceH;
+      c.height = slicePx;
+
       const ctx = c.getContext('2d');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      if (pageIdx > 0) pdf.addPage();
-      pdf.addImage(
-        c.toDataURL('image/jpeg', 0.95),
-        'JPEG', 0, 0, imgW,
-        (sliceH * imgW) / canvas.width
-      );
-      y += sliceH;
-      pageIdx++;
+      ctx.drawImage(canvas, 0, y, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+
+      const sliceMm = (slicePx * imgW) / canvas.width;
+      if (i > 0) pdf.addPage();
+      pdf.addImage(c.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgW, sliceMm);
+
+      y += slicePx;
     }
   }
 
