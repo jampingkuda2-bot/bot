@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Eye, ZoomIn, ZoomOut, ChevronsUpDown, ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -8,6 +8,7 @@ import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
 
 const PADDING_TOP = 16;
+const PAGE_NUMBER_RESERVE_MM = 8;
 
 export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
   const page = PAGE_SIZES[doc.pageSize];
@@ -19,7 +20,14 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   const scrollRef = useRef(null);
   const margin = doc.showCover ? 0 : doc.margin;
 
-  // pagination + count
+  // Sama persis dengan logika export PDF
+  const reservePx = useMemo(
+    () => (doc.showPageNumbers ? (pageH * PAGE_NUMBER_RESERVE_MM) / mmH : 0),
+    [pageH, mmH, doc.showPageNumbers]
+  );
+  const usablePageH = useMemo(() => Math.max(100, pageH - reservePx), [pageH, reservePx]);
+
+  // Pagination + hitung halaman
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -35,17 +43,17 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         const rect = block.getBoundingClientRect();
         const top = (rect.top - elTop) / scale;
         const height = rect.height / scale;
-        const pageStart = Math.floor(top / pageH) * pageH;
-        const pageEnd = pageStart + pageH;
+        const pageStart = Math.floor(top / usablePageH) * usablePageH;
+        const pageEnd = pageStart + usablePageH;
         const manualBreak = block.dataset.pageBreak === 'true';
         const crosses = top + height > pageEnd - 4;
-        const fitsOnOnePage = height + 32 <= pageH;
+        const fitsOnOnePage = height + 32 <= usablePageH;
 
         let pushDown = 0;
         if (manualBreak && top > pageStart + 2) pushDown = pageEnd - top;
         else if (crosses && fitsOnOnePage) pushDown = pageEnd - top;
 
-        if (pushDown > 2 && pushDown < pageH) {
+        if (pushDown > 2 && pushDown < usablePageH) {
           const spacer = document.createElement('div');
           spacer.setAttribute('data-spacer', '1');
           spacer.style.height = pushDown + 'px';
@@ -54,48 +62,37 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         }
       });
 
-      // Hitung halaman berdasarkan posisi bawah blok terakhir
+      // Hitung jumlah halaman — persis seperti export:
+      // contentMm = imgH - reserve
+      // pages = ceil(contentMm / usableH)
       requestAnimationFrame(() => {
-        const newElTop = el.getBoundingClientRect().top;
-        const fresh = el.querySelectorAll('[data-block]');
-        if (fresh.length === 0) {
-          setPages(1);
-          return;
-        }
-        let maxBottom = 0;
-        fresh.forEach((b) => {
-          const r = b.getBoundingClientRect();
-          const bottom = (r.bottom - newElTop) / scale;
-          if (bottom > maxBottom) maxBottom = bottom;
-        });
-        // Tambah padding bawah (kecuali cover, karena padding sudah di dalam DocBody)
-        const total = maxBottom + (doc.showCover ? 0 : doc.margin);
-        const count = Math.max(1, Math.ceil((total - 8) / pageH));
+        const h = el.scrollHeight;
+        const contentPx = Math.max(1, h - reservePx);
+        const count = Math.max(1, Math.ceil(contentPx / usablePageH));
         setPages(count);
       });
     };
 
-    const t = setTimeout(applyPagination, 60);
+    const t = setTimeout(applyPagination, 80);
     return () => clearTimeout(t);
-  }, [doc, pageH, previewRef, zoom]);
+  }, [doc, usablePageH, reservePx, previewRef, zoom]);
 
-  // Clamp current page
   useEffect(() => {
     if (currentPage > pages) setCurrentPage(pages);
   }, [pages, currentPage]);
 
-  // Update indikator halaman saat scroll
+  // Update current page saat scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       const top = el.scrollTop - PADDING_TOP;
-      const p = Math.round(top / (pageH * zoom)) + 1;
+      const p = Math.floor(top / (usablePageH * zoom)) + 1;
       setCurrentPage(Math.max(1, Math.min(pages, p)));
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [pageH, zoom, pages]);
+  }, [usablePageH, zoom, pages]);
 
   const scrollToPage = (n) => {
     const target = Math.max(1, Math.min(pages, n));
@@ -103,21 +100,20 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     const el = scrollRef.current;
     if (el) {
       el.scrollTo({
-        top: PADDING_TOP + (target - 1) * pageH * zoom,
+        top: PADDING_TOP + (target - 1) * usablePageH * zoom,
         behavior: 'smooth',
       });
     }
   };
 
-  // Swipe gesture (mobile)
+  // Swipe gesture
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     let startX = 0, startY = 0, active = false;
     const onStart = (e) => {
       if (e.pointerType !== 'touch') return;
-      if (e.target.closest && e.target.closest('[data-draggable]')) return;
-      if (e.target.closest && e.target.closest('[data-toolbar]')) return;
+      if (e.target.closest && (e.target.closest('[data-draggable]') || e.target.closest('[data-toolbar]'))) return;
       active = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -138,7 +134,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
       el.removeEventListener('pointerdown', onStart);
       el.removeEventListener('pointerup', onEnd);
     };
-  }, [currentPage, pages, pageH, zoom]);
+  }, [currentPage, pages, usablePageH, zoom]);
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
@@ -213,7 +209,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
             position: 'relative',
           }}
         >
-          <PageBreakOverlay pageH={pageH} zoom={zoom} totalHeight={pageH * pages} />
+          <PageBreakOverlay usablePageH={usablePageH} zoom={zoom} pages={pages} />
           <div
             ref={previewRef}
             className="shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]"
@@ -241,23 +237,25 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   );
 }
 
-function PageBreakOverlay({ pageH, zoom, totalHeight }) {
-  const count = Math.ceil(totalHeight / pageH);
-  if (count <= 1) return null;
+function PageBreakOverlay({ usablePageH, zoom, pages }) {
+  if (pages <= 1) return null;
   return (
     <>
-      {Array.from({ length: count - 1 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute left-0 right-0 pointer-events-none z-10"
-          style={{ top: (i + 1) * pageH * zoom + PADDING_TOP }}
-        >
-          <div className="border-t border-dashed border-blue-400/60" />
-          <div className="absolute right-0 -top-2.5 text-[10px] font-medium text-blue-500 bg-white px-1.5 rounded">
-            Hal. {i + 2}
+      {Array.from({ length: pages - 1 }).map((_, i) => {
+        const top = (i + 1) * usablePageH * zoom + PADDING_TOP;
+        return (
+          <div
+            key={i}
+            className="absolute left-0 right-0 pointer-events-none z-20"
+            style={{ top }}
+          >
+            <div className="border-t-2 border-dashed border-red-400/80" />
+            <div className="absolute right-2 -top-2.5 text-[10px] font-medium text-white bg-red-500 px-2 py-0.5 rounded shadow">
+              Hal. {i + 2}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
