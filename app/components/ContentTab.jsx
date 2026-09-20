@@ -16,6 +16,7 @@ export default function ContentTab({
   const locked = !!doc.locked;
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
+  const subtitleGap = doc.subtitleGap ?? 8;
 
   return (
     <>
@@ -76,7 +77,7 @@ export default function ContentTab({
             )}
           </div>
           <p className="text-[11px] text-neutral-500 mt-2">
-            💡 Geser judul langsung di preview.
+            💡 Geser judul langsung di preview. Subjudul otomatis mengikuti.
           </p>
         </Field>
 
@@ -93,8 +94,28 @@ export default function ContentTab({
         </Field>
 
         <Field label="Subjudul">
-          <TextInput value={doc.subtitle} onChange={(v) => update({ subtitle: v })} placeholder="Subjudul" />
+          <textarea
+            value={doc.subtitle || ''}
+            onChange={(e) => update({ subtitle: e.target.value })}
+            placeholder="Subjudul atau deskripsi singkat (bisa Enter untuk baris baru)"
+            rows={2}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
+          />
         </Field>
+
+        {doc.subtitle && (
+          <Field label={`Jarak Judul–Subjudul — ${subtitleGap}px`}>
+            <input
+              type="range"
+              min={0}
+              max={80}
+              step={2}
+              value={subtitleGap}
+              onChange={(e) => update({ subtitleGap: Number(e.target.value) })}
+              className="w-full"
+            />
+          </Field>
+        )}
 
         <Field label="Penulis">
           <textarea
