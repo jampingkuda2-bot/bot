@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { PAGE_SIZES, buildInitialDoc, STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug } from './lib/constants';
+import {
+  PAGE_SIZES, buildInitialDoc, normalizeDoc, uid,
+  STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug,
+} from './lib/constants';
 import { exportPdf } from './lib/pdf';
 import TopBar from './components/TopBar';
 import Tabs from './components/Tabs';
@@ -54,7 +57,15 @@ export default function Home() {
 
   const addSection = () => setDoc((d) => ({
     ...d,
-    sections: [...d.sections, { heading: 'Bagian Baru', body: '', align: 'left', breakBefore: false }],
+    sections: [...d.sections, {
+      id: uid(),
+      heading: 'Bagian Baru',
+      body: '',
+      align: 'left',
+      breakBefore: false,
+      offsetX: 0,
+      offsetY: 0,
+    }],
   }));
 
   const removeSection = (i) => setDoc((d) => ({
@@ -72,7 +83,7 @@ export default function Home() {
 
   const duplicateSection = (i) => setDoc((d) => {
     const s = d.sections.slice();
-    s.splice(i + 1, 0, { ...s[i] });
+    s.splice(i + 1, 0, { ...s[i], id: uid(), offsetX: 0, offsetY: 0 });
     return { ...d, sections: s };
   });
 
@@ -94,7 +105,7 @@ export default function Home() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
-        setDoc({ ...buildInitialDoc(), ...parsed });
+        setDoc(normalizeDoc(parsed));
       } catch { alert('File JSON tidak valid.'); }
     };
     reader.readAsText(f);
