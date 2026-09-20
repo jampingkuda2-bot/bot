@@ -31,7 +31,7 @@ export function ActionBtn({ icon: Icon, onClick, label, full }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition ${
+      className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition ${
         full ? 'w-full' : ''
       }`}
     >
@@ -43,9 +43,9 @@ export function ActionBtn({ icon: Icon, onClick, label, full }) {
 
 export function Stat({ label, value }) {
   return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 bg-neutral-50/50 dark:bg-neutral-900/50">
+    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-2.5 py-1.5 bg-neutral-50/50 dark:bg-neutral-900/50">
       <div className="text-[10px] uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="font-medium truncate">{value}</div>
+      <div className="font-medium truncate text-sm">{value}</div>
     </div>
   );
 }
@@ -53,10 +53,10 @@ export function Stat({ label, value }) {
 export function Group({ title, children }) {
   return (
     <section>
-      <h3 className="text-[11px] uppercase tracking-wider font-semibold text-neutral-500 mb-3">
+      <h3 className="text-[10px] uppercase tracking-wider font-semibold text-neutral-500 mb-2 px-0.5">
         {title}
       </h3>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-2.5">{children}</div>
     </section>
   );
 }
@@ -64,7 +64,7 @@ export function Group({ title, children }) {
 export function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+      <span className="block text-[11px] font-medium text-neutral-700 dark:text-neutral-300 mb-1 px-0.5">
         {label}
       </span>
       {children}
@@ -79,33 +79,33 @@ export function TextInput({ value, onChange, placeholder }) {
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition"
+      className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition"
     />
   );
 }
 
 export function Toggle({ label, hint, checked, onChange }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer select-none">
+    <label className="flex items-start gap-2.5 cursor-pointer select-none py-0.5">
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`mt-0.5 relative w-9 h-5 rounded-full transition-colors shrink-0 ${
+        className={`mt-0.5 relative w-8 h-[18px] rounded-full transition-colors shrink-0 ${
           checked ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'
         }`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-            checked ? 'translate-x-4' : 'translate-x-0'
+          className={`absolute top-[2px] left-[2px] w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${
+            checked ? 'translate-x-3.5' : 'translate-x-0'
           }`}
         />
       </button>
-      <span className="flex-1">
-        <span className="block text-sm font-medium text-neutral-800 dark:text-neutral-200">
+      <span className="flex-1 min-w-0">
+        <span className="block text-[13px] font-medium text-neutral-800 dark:text-neutral-200">
           {label}
         </span>
         {hint && (
-          <span className="block text-[11px] text-neutral-500 mt-0.5">{hint}</span>
+          <span className="block text-[10px] text-neutral-500 mt-0.5 leading-tight">{hint}</span>
         )}
       </span>
     </label>
