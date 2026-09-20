@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, ZoomIn, ZoomOut, ChevronsUpDown } from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
@@ -11,41 +11,39 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
   const mmW = isL ? page.mmH : page.mmW;
   const mmH = isL ? page.mmW : page.mmH;
   const [pages, setPages] = useState(1);
-  const innerRef = useRef(null);
+  const margin = doc.showCover ? 0 : doc.margin;
 
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
 
     const applyPagination = () => {
-      // 1. Buang spacer lama
       el.querySelectorAll('[data-spacer]').forEach((s) => s.remove());
 
-      // 2. Ukur tiap blok
+      const scale = zoom || 1;
       const elTop = el.getBoundingClientRect().top;
       const blocks = Array.from(el.querySelectorAll('[data-block]'));
 
       blocks.forEach((block) => {
         const rect = block.getBoundingClientRect();
-        const top = rect.top - elTop;
-        const height = rect.height;
+        const top = (rect.top - elTop) / scale;
+        const height = rect.height / scale;
 
         const pageStart = Math.floor(top / pageH) * pageH;
         const pageEnd = pageStart + pageH;
 
         const manualBreak = block.dataset.pageBreak === 'true';
-        const crosses = top + height > pageEnd + 2;
+        const crosses = top + height > pageEnd - 4;
         const fitsOnOnePage = height + 32 <= pageH;
 
         let pushDown = 0;
-
         if (manualBreak && top > pageStart + 2) {
           pushDown = pageEnd - top;
         } else if (crosses && fitsOnOnePage) {
           pushDown = pageEnd - top;
         }
 
-        if (pushDown > 4 && pushDown < pageH) {
+        if (pushDown > 2 && pushDown < pageH) {
           const spacer = document.createElement('div');
           spacer.setAttribute('data-spacer', '1');
           spacer.style.height = pushDown + 'px';
@@ -55,15 +53,15 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
         }
       });
 
-      // 3. Update jumlah halaman
       requestAnimationFrame(() => {
-        setPages(Math.max(1, Math.ceil(el.scrollHeight / pageH)));
+        const h = el.scrollHeight;
+        setPages(Math.max(1, Math.ceil((h - 4) / pageH)));
       });
     };
 
     const t = setTimeout(applyPagination, 60);
     return () => clearTimeout(t);
-  }, [doc, pageH, previewRef]);
+  }, [doc, pageH, previewRef, zoom]);
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
@@ -102,6 +100,8 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
             style={{
               width: pageW,
               minHeight: pageH,
+              boxSizing: 'border-box',
+              padding: margin,
               background: '#ffffff',
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',
@@ -110,7 +110,6 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
               lineHeight: doc.lineHeight,
               color: '#111827',
               position: 'relative',
-              overflow: 'hidden',
             }}
           >
             <Watermark text={doc.watermark} />
