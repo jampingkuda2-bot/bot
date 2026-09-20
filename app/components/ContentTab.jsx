@@ -1,10 +1,12 @@
 import {
-  Plus, Upload, Image as ImageIcon,
-  RotateCcw, Lock, Unlock,
+  Plus, Upload, Image as ImageIcon, RotateCcw,
 } from 'lucide-react';
 import { Group, Field, TextInput, Toggle } from './ui';
 import SectionCard from './SectionCard';
 import { FONTS } from '../lib/constants';
+
+const BIG_TEXTAREA =
+  'w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y min-h-[100px]';
 
 export default function ContentTab({
   doc, update, updateSection, addSection,
@@ -13,7 +15,6 @@ export default function ContentTab({
   const hasTitleOffset = (doc.titleOffsetX || 0) !== 0 || (doc.titleOffsetY || 0) !== 0;
   const hasLogoOffset = (doc.logoOffsetX || 0) !== 0 || (doc.logoOffsetY || 0) !== 0;
   const hasAuthorOffset = (doc.authorOffsetX || 0) !== 0 || (doc.authorOffsetY || 0) !== 0;
-  const locked = !!doc.locked;
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
   const subtitleGap = doc.subtitleGap ?? 8;
@@ -21,29 +22,10 @@ export default function ContentTab({
 
   return (
     <>
-      <div className="mb-4">
-        <button
-          onClick={() => update({ locked: !locked })}
-          className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition ${
-            locked
-              ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300'
-              : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
-          }`}
-        >
-          {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          {locked ? 'Terkunci — klik untuk buka' : 'Kunci judul, logo & penulis'}
-        </button>
-        {locked && (
-          <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
-            🔒 Semua elemen terkunci.
-          </p>
-        )}
-      </div>
-
       <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 p-3 mb-4">
         <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-          💡 <b>Tips:</b> <b>Tap</b> judul, logo, atau penulis di preview → muncul
-          toolbar untuk geser (<b>&lt; &gt; ^ v</b>), atur perataan, reset, atau hapus.
+          💡 <b>Tips:</b> <b>Tap</b> judul, logo, atau penulis di preview → bar editor
+          muncul di bawah toolbar untuk geser, atur perataan, reset, atau hapus.
         </p>
       </div>
 
@@ -78,9 +60,9 @@ export default function ContentTab({
           <textarea
             value={doc.subtitle || ''}
             onChange={(e) => update({ subtitle: e.target.value })}
-            placeholder="Subjudul (bisa Enter untuk baris baru)"
-            rows={2}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
+            placeholder="Subjudul atau deskripsi singkat (bisa Enter untuk baris baru)"
+            rows={4}
+            className={BIG_TEXTAREA}
           />
         </Field>
 
@@ -103,8 +85,8 @@ export default function ContentTab({
             value={doc.author || ''}
             onChange={(e) => update({ author: e.target.value })}
             placeholder="Nama penulis (bisa Enter untuk baris baru)"
-            rows={2}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
+            rows={4}
+            className={BIG_TEXTAREA}
           />
         </Field>
 
@@ -148,7 +130,6 @@ export default function ContentTab({
         </Field>
       </Group>
 
-      {/* ===== BAGIAN — dipindah ke atas, langsung setelah blok penulis ===== */}
       <Group title={`Bagian (${doc.sections.length})`}>
         <div className="space-y-3">
           {doc.sections.map((s, i) => (
