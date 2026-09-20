@@ -326,13 +326,13 @@ function TableBlock({ tableData, align }) {
 
   return (
     <div style={{
-      width: '100%',
       display: 'flex',
       justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
     }}>
       <table style={{
         borderCollapse: 'collapse',
-        width: '100%',
+        width: 'auto',
+        tableLayout: 'auto',
         fontSize: '0.92em',
         pageBreakInside: 'avoid',
         color: '#111827',
@@ -354,6 +354,8 @@ function TableBlock({ tableData, align }) {
                       background: 'transparent',
                       fontWeight: isHeader ? 700 : 400,
                       whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      minWidth: 40,
                     }}
                   >
                     {cell || '\u00A0'}
