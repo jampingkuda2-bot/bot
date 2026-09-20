@@ -1,0 +1,60 @@
+:root {
+  --ink: #14171c;
+  --panel: #1b1f26;
+  --panel-2: #232833;
+  --line: #333a47;
+  --paper-area: #0f1115;
+  --cream: #f2efe9;
+  --muted: #9aa3b2;
+  --ochre: #d9a441;
+  --ochre-dim: #b3853a;
+  --sage: #7c9885;
+  --danger: #c96a5a;
+  --radius: 10px;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-ui: "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+input,
+select {
+  font-family: var(--font-ui);
+}
+
+::selection {
+  background: var(--ochre);
+  color: #14171c;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
