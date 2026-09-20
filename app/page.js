@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  PAGE_SIZES, buildInitialDoc, loadLocal, downloadBlob, slug,
-  exportPdf, STORAGE_KEY, THEME_KEY,
-  TopBar, Tabs, ContentTab, StyleTab, PageTab, DataTab, PreviewPanel,
-} from './pdf-studio';
+import { PAGE_SIZES, buildInitialDoc, STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug } from './lib/constants';
+import { exportPdf } from './lib/pdf';
+import TopBar from './components/TopBar';
+import Tabs from './components/Tabs';
+import ContentTab from './components/ContentTab';
+import StyleTab from './components/StyleTab';
+import PageTab from './components/PageTab';
+import DataTab from './components/DataTab';
+import PreviewPanel from './components/PreviewPanel';
 
 export default function Home() {
   const [doc, setDoc] = useState(buildInitialDoc);
@@ -42,42 +46,35 @@ export default function Home() {
 
   const update = useCallback((patch) => setDoc((d) => ({ ...d, ...patch })), []);
 
-  const page = PAGE_SIZES[doc.pageSize];
-  const isLandscape = doc.orientation === 'landscape';
-  const pageW = isLandscape ? page.h : page.w;
-  const pageH = isLandscape ? page.w : page.h;
+  const updateSection = (i, patch) => setDoc((d) => {
+    const s = d.sections.slice();
+    s[i] = { ...s[i], ...patch };
+    return { ...d, sections: s };
+  });
 
-  const updateSection = (i, patch) =>
-    setDoc((d) => {
-      const s = d.sections.slice();
-      s[i] = { ...s[i], ...patch };
-      return { ...d, sections: s };
-    });
+  const addSection = () => setDoc((d) => ({
+    ...d,
+    sections: [...d.sections, { heading: 'Bagian Baru', body: '', align: 'left', breakBefore: false }],
+  }));
 
-  const addSection = () =>
-    setDoc((d) => ({
-      ...d,
-      sections: [...d.sections, { heading: 'Bagian Baru', body: '', align: 'left', breakBefore: false }],
-    }));
+  const removeSection = (i) => setDoc((d) => ({
+    ...d,
+    sections: d.sections.filter((_, idx) => idx !== i),
+  }));
 
-  const removeSection = (i) =>
-    setDoc((d) => ({ ...d, sections: d.sections.filter((_, idx) => idx !== i) }));
+  const moveSection = (i, dir) => setDoc((d) => {
+    const s = d.sections.slice();
+    const j = i + dir;
+    if (j < 0 || j >= s.length) return d;
+    [s[i], s[j]] = [s[j], s[i]];
+    return { ...d, sections: s };
+  });
 
-  const moveSection = (i, dir) =>
-    setDoc((d) => {
-      const s = d.sections.slice();
-      const j = i + dir;
-      if (j < 0 || j >= s.length) return d;
-      [s[i], s[j]] = [s[j], s[i]];
-      return { ...d, sections: s };
-    });
-
-  const duplicateSection = (i) =>
-    setDoc((d) => {
-      const s = d.sections.slice();
-      s.splice(i + 1, 0, { ...s[i] });
-      return { ...d, sections: s };
-    });
+  const duplicateSection = (i) => setDoc((d) => {
+    const s = d.sections.slice();
+    s.splice(i + 1, 0, { ...s[i] });
+    return { ...d, sections: s };
+  });
 
   const onLogoChange = (e) => {
     const f = e.target.files?.[0];
@@ -88,9 +85,7 @@ export default function Home() {
     e.target.value = '';
   };
 
-  const exportJson = () => {
-    downloadBlob(JSON.stringify(doc, null, 2), `${slug(doc.title)}.json`);
-  };
+  const exportJson = () => downloadBlob(JSON.stringify(doc, null, 2), `${slug(doc.title)}.json`);
 
   const importJson = (e) => {
     const f = e.target.files?.[0];
@@ -100,9 +95,7 @@ export default function Home() {
       try {
         const parsed = JSON.parse(reader.result);
         setDoc({ ...buildInitialDoc(), ...parsed });
-      } catch {
-        alert('File JSON tidak valid.');
-      }
+      } catch { alert('File JSON tidak valid.'); }
     };
     reader.readAsText(f);
     e.target.value = '';
@@ -115,7 +108,6 @@ export default function Home() {
     try {
       await exportPdf(previewRef.current, doc, setProgress);
     } catch (e) {
-      console.error(e);
       alert('Gagal membuat PDF: ' + e.message);
     } finally {
       setExporting(false);
@@ -135,6 +127,11 @@ export default function Home() {
       setTimeout(() => setCopied(false), 1500);
     } catch {}
   };
+
+  const page = PAGE_SIZES[doc.pageSize];
+  const isL = doc.orientation === 'landscape';
+  const pageW = isL ? page.h : page.w;
+  const pageH = isL ? page.w : page.h;
 
   if (!ready) {
     return (
@@ -164,11 +161,9 @@ export default function Home() {
         className="hidden"
         onChange={importJson}
       />
-
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_1fr] min-h-0">
         <aside className="border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col min-h-0 lg:max-h-[calc(100vh-57px)]">
           <Tabs tab={tab} setTab={setTab} />
-
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {tab === 'content' && (
               <ContentTab
@@ -196,7 +191,6 @@ export default function Home() {
             )}
           </div>
         </aside>
-
         <PreviewPanel
           doc={doc}
           pageW={pageW}
@@ -208,4 +202,4 @@ export default function Home() {
       </div>
     </div>
   );
-  }
+            }
