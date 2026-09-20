@@ -22,6 +22,25 @@ const AUTHOR_ALIGN_OPTS = [
 const SUBTITLE_COLOR = '#111827';
 const AUTHOR_COLOR = '#111827';
 
+function hasTitle(doc) {
+  return !!(doc.title && doc.title.trim()) || !!(doc.subtitle && doc.subtitle.trim());
+}
+
+function hasAuthor(doc) {
+  return !!(doc.author && doc.author.trim()) || !!(doc.date && doc.date.trim());
+}
+
+function sectionHasContent(s) {
+  return !!(s.heading && s.heading.trim()) || !!(s.body && s.body.trim());
+}
+
+// Konten yang muncul DI BAWAH cover (tidak termasuk judul/penulis/logo)
+function hasPostCoverContent(doc) {
+  if (doc.headerText && doc.headerText.trim()) return true;
+  if (doc.footerText && doc.footerText.trim()) return true;
+  return doc.sections.some(sectionHasContent);
+}
+
 export default function DocBody({ doc, update, zoom = 1 }) {
   const isPlain = !!doc.plain;
   const d = isPlain
@@ -33,22 +52,16 @@ export default function DocBody({ doc, update, zoom = 1 }) {
     return (
       <>
         <CoverPage doc={d} plain={isPlain} update={update} zoom={zoom} />
-        <div style={{ padding: p, position: 'relative' }}>
-          <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />
-        </div>
+        {hasPostCoverContent(d) && (
+          <div style={{ padding: p, position: 'relative' }}>
+            <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />
+          </div>
+        )}
       </>
     );
   }
 
   return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />;
-}
-
-function hasTitle(doc) {
-  return !!(doc.title && doc.title.trim()) || !!(doc.subtitle && doc.subtitle.trim());
-}
-
-function hasAuthor(doc) {
-  return !!(doc.author && doc.author.trim()) || !!(doc.date && doc.date.trim());
 }
 
 function LogoImg({ doc, update, zoom, size }) {
@@ -232,10 +245,11 @@ function ContentSections({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const logoSize = doc.logoSize || 56;
   const showHeader = doc.logo || hasTitle(doc) || hasAuthor(doc);
+  const visibleSections = doc.sections.filter(sectionHasContent);
 
   return (
     <>
-      {doc.headerText && (
+      {doc.headerText && doc.headerText.trim() && (
         <div
           data-block
           style={{
@@ -279,33 +293,38 @@ function ContentSections({ doc, plain, update, zoom }) {
         </header>
       )}
 
-      {doc.sections.map((s, i) => (
-        <section
-          key={i}
-          data-block
-          data-page-break={s.breakBefore ? 'true' : 'false'}
-          style={{ marginBottom: 28, pageBreakInside: 'avoid' }}
-        >
-          <SectionHeading
-            text={s.heading}
-            style={doc.headingStyle}
-            color={doc.accent}
-            plain={plain}
-          />
-          <p
-            style={{
-              whiteSpace: 'pre-wrap',
-              margin: 0,
-              textAlign: s.align || 'left',
-              color: '#1f2937',
-            }}
+      {visibleSections.map((s) => {
+        const originalIndex = doc.sections.indexOf(s);
+        return (
+          <section
+            key={originalIndex}
+            data-block
+            data-page-break={s.breakBefore ? 'true' : 'false'}
+            style={{ marginBottom: 28, pageBreakInside: 'avoid' }}
           >
-            {s.body}
-          </p>
-        </section>
-      ))}
+            <SectionHeading
+              text={s.heading}
+              style={doc.headingStyle}
+              color={doc.accent}
+              plain={plain}
+            />
+            {s.body && (
+              <p
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  margin: 0,
+                  textAlign: s.align || 'left',
+                  color: '#1f2937',
+                }}
+              >
+                {s.body}
+              </p>
+            )}
+          </section>
+        );
+      })}
 
-      {doc.footerText && (
+      {doc.footerText && doc.footerText.trim() && (
         <footer
           data-block
           style={{
@@ -325,7 +344,7 @@ function ContentSections({ doc, plain, update, zoom }) {
 }
 
 function SectionHeading({ text, style: s, color, plain }) {
-  if (!text) return null;
+  if (!text || !text.trim()) return null;
 
   if (plain) {
     return (
