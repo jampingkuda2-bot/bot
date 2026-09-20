@@ -320,6 +320,7 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
 function TableBlock({ tableData, align }) {
   const rows = tableData?.rows || [];
   const headerRow = tableData?.headerRow !== false;
+  const numbering = tableData?.numbering !== false;
   if (rows.length === 0 || rows[0].length === 0) return null;
 
   const BORDER = '1px solid #111827';
@@ -340,8 +341,27 @@ function TableBlock({ tableData, align }) {
         <tbody>
           {rows.map((row, ri) => {
             const isHeader = headerRow && ri === 0;
+            const dataIndex = headerRow ? ri - 1 : ri;
             return (
               <tr key={ri}>
+                {numbering && (
+                  <td
+                    style={{
+                      border: BORDER,
+                      padding: '6px 8px',
+                      textAlign: 'center',
+                      verticalAlign: 'top',
+                      color: '#111827',
+                      background: 'transparent',
+                      fontWeight: isHeader ? 700 : 400,
+                      width: 28,
+                      minWidth: 28,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isHeader ? '#' : dataIndex + 1}
+                  </td>
+                )}
                 {row.map((cell, ci) => (
                   <td
                     key={ci}
