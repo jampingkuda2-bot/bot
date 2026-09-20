@@ -28,6 +28,7 @@ export default function DocBody({ doc }) {
 function CoverPage({ doc, plain }) {
   return (
     <div
+      data-block
       style={{
         height: PAGE_SIZES[doc.pageSize][doc.orientation === 'landscape' ? 'w' : 'h'],
         padding: 80,
@@ -89,6 +90,7 @@ function ContentSections({ doc, plain }) {
     <>
       {doc.headerText && (
         <div
+          data-block
           style={{
             fontSize: '0.75em',
             color: '#94a3b8',
@@ -103,6 +105,7 @@ function ContentSections({ doc, plain }) {
 
       {!doc.showCover && (
         <header
+          data-block
           style={{
             borderBottom: plain ? 'none' : `2px solid ${doc.accent}`,
             paddingBottom: plain ? 0 : 20,
@@ -159,12 +162,11 @@ function ContentSections({ doc, plain }) {
       {doc.sections.map((s, i) => (
         <section
           key={i}
+          data-block
+          data-page-break={s.breakBefore ? 'true' : 'false'}
           style={{
             marginBottom: 28,
             pageBreakInside: 'avoid',
-            ...(s.breakBefore && i > 0
-              ? { pageBreakBefore: 'always', breakBefore: 'page' }
-              : {}),
           }}
         >
           <SectionHeading
@@ -188,6 +190,7 @@ function ContentSections({ doc, plain }) {
 
       {doc.footerText && (
         <footer
+          data-block
           style={{
             marginTop: 48,
             paddingTop: 14,
