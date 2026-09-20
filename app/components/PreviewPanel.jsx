@@ -7,7 +7,6 @@ import {
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
 
-const PADDING_TOP = 16;
 const PAGE_NUMBER_RESERVE_MM = 8;
 
 export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
@@ -17,8 +16,9 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   const mmH = isL ? page.mmW : page.mmH;
   const [pages, setPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const scrollRef = useRef(null);
+  const [direction, setDirection] = useState(0);
   const margin = doc.showCover ? 0 : doc.margin;
+  const swipeRef = useRef(null);
 
   // Sama persis dengan logika export PDF
   const reservePx = useMemo(
@@ -27,12 +27,12 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   );
   const usablePageH = useMemo(() => Math.max(100, pageH - reservePx), [pageH, reservePx]);
 
-  // Pagination + hitung halaman
+  // Pagination — posisikan blok ke halaman yang benar
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
 
-    const applyPagination = () => {
+    const apply = () => {
       el.querySelectorAll('[data-spacer]').forEach((s) => s.remove());
 
       const scale = zoom || 1;
@@ -62,79 +62,54 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         }
       });
 
-      // Hitung jumlah halaman — persis seperti export:
-      // contentMm = imgH - reserve
-      // pages = ceil(contentMm / usableH)
       requestAnimationFrame(() => {
         const h = el.scrollHeight;
         const contentPx = Math.max(1, h - reservePx);
         const count = Math.max(1, Math.ceil(contentPx / usablePageH));
         setPages(count);
+        setCurrentPage((cp) => Math.min(cp, count));
       });
     };
 
-    const t = setTimeout(applyPagination, 80);
+    const t = setTimeout(apply, 80);
     return () => clearTimeout(t);
   }, [doc, usablePageH, reservePx, previewRef, zoom]);
 
-  useEffect(() => {
-    if (currentPage > pages) setCurrentPage(pages);
-  }, [pages, currentPage]);
-
-  // Update current page saat scroll
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const top = el.scrollTop - PADDING_TOP;
-      const p = Math.floor(top / (usablePageH * zoom)) + 1;
-      setCurrentPage(Math.max(1, Math.min(pages, p)));
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, [usablePageH, zoom, pages]);
-
-  const scrollToPage = (n) => {
+  const goTo = (n) => {
     const target = Math.max(1, Math.min(pages, n));
+    setDirection(target > currentPage ? 1 : target < currentPage ? -1 : 0);
     setCurrentPage(target);
-    const el = scrollRef.current;
-    if (el) {
-      el.scrollTo({
-        top: PADDING_TOP + (target - 1) * usablePageH * zoom,
-        behavior: 'smooth',
-      });
-    }
   };
 
-  // Swipe gesture
+  // Swipe gesture (mobile) — khusus pindah halaman
   useEffect(() => {
-    const el = scrollRef.current;
+    const el = swipeRef.current;
     if (!el) return;
-    let startX = 0, startY = 0, active = false;
-    const onStart = (e) => {
+    let x0 = 0, y0 = 0, active = false;
+    const down = (e) => {
       if (e.pointerType !== 'touch') return;
       if (e.target.closest && (e.target.closest('[data-draggable]') || e.target.closest('[data-toolbar]'))) return;
-      active = true;
-      startX = e.clientX;
-      startY = e.clientY;
+      active = true; x0 = e.clientX; y0 = e.clientY;
     };
-    const onEnd = (e) => {
+    const up = (e) => {
       if (!active) return;
       active = false;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
+      const dx = e.clientX - x0;
+      const dy = e.clientY - y0;
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx < 0) scrollToPage(currentPage + 1);
-        else scrollToPage(currentPage - 1);
+        if (dx < 0) goTo(currentPage + 1);
+        else goTo(currentPage - 1);
       }
     };
-    el.addEventListener('pointerdown', onStart);
-    el.addEventListener('pointerup', onEnd);
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointerup', up);
     return () => {
-      el.removeEventListener('pointerdown', onStart);
-      el.removeEventListener('pointerup', onEnd);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointerup', up);
     };
-  }, [currentPage, pages, usablePageH, zoom]);
+  }, [currentPage, pages]);
+
+  const offsetY = (currentPage - 1) * usablePageH;
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
@@ -150,7 +125,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
           <button
-            onClick={() => scrollToPage(currentPage - 1)}
+            onClick={() => goTo(currentPage - 1)}
             disabled={currentPage <= 1}
             className="p-1.5 rounded-md hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
             title="Halaman sebelumnya"
@@ -161,7 +136,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
             {currentPage} / {pages}
           </span>
           <button
-            onClick={() => scrollToPage(currentPage + 1)}
+            onClick={() => goTo(currentPage + 1)}
             disabled={currentPage >= pages}
             className="p-1.5 rounded-md hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
             title="Halaman berikutnya"
@@ -198,65 +173,62 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         </div>
       </div>
 
-      {/* Scroll area */}
-      <div ref={scrollRef} className="flex-1 overflow-auto">
-        <div
-          style={{
-            width: pageW * zoom,
-            margin: '0 auto',
-            paddingTop: PADDING_TOP,
-            paddingBottom: PADDING_TOP,
-            position: 'relative',
-          }}
-        >
-          <PageBreakOverlay usablePageH={usablePageH} zoom={zoom} pages={pages} />
+      {/* Page viewport — satu halaman */}
+      <div ref={swipeRef} className="flex-1 overflow-auto">
+        <div className="min-h-full flex items-center justify-center p-4">
           <div
-            ref={previewRef}
-            className="shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]"
+            className="shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)] rounded-sm"
             style={{
-              width: pageW,
-              minHeight: pageH,
-              boxSizing: 'border-box',
-              padding: margin,
-              background: '#ffffff',
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top left',
-              fontFamily: doc.fontFamily,
-              fontSize: doc.fontSize,
-              lineHeight: doc.lineHeight,
-              color: '#111827',
+              width: pageW * zoom,
+              height: pageH * zoom,
+              overflow: 'hidden',
               position: 'relative',
+              background: '#ffffff',
+              flexShrink: 0,
             }}
           >
-            <Watermark text={doc.watermark} />
-            <DocBody doc={doc} update={update} zoom={zoom} />
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: pageW,
+                transform: `scale(${zoom}) translateY(${-offsetY}px)`,
+                transformOrigin: 'top left',
+                transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform',
+              }}
+            >
+              <div
+                ref={previewRef}
+                style={{
+                  width: pageW,
+                  minHeight: pageH,
+                  boxSizing: 'border-box',
+                  padding: margin,
+                  background: '#ffffff',
+                  fontFamily: doc.fontFamily,
+                  fontSize: doc.fontSize,
+                  lineHeight: doc.lineHeight,
+                  color: '#111827',
+                  position: 'relative',
+                }}
+              >
+                <Watermark text={doc.watermark} />
+                <DocBody doc={doc} update={update} zoom={zoom} />
+              </div>
+            </div>
+
+            {/* Nomor halaman di bawah */}
+            {doc.showPageNumbers && (
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-1.5 text-[9px] text-neutral-400 select-none pointer-events-none">
+                {currentPage} / {pages}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function PageBreakOverlay({ usablePageH, zoom, pages }) {
-  if (pages <= 1) return null;
-  return (
-    <>
-      {Array.from({ length: pages - 1 }).map((_, i) => {
-        const top = (i + 1) * usablePageH * zoom + PADDING_TOP;
-        return (
-          <div
-            key={i}
-            className="absolute left-0 right-0 pointer-events-none z-20"
-            style={{ top }}
-          >
-            <div className="border-t-2 border-dashed border-red-400/80" />
-            <div className="absolute right-2 -top-2.5 text-[10px] font-medium text-white bg-red-500 px-2 py-0.5 rounded shadow">
-              Hal. {i + 2}
-            </div>
-          </div>
-        );
-      })}
-    </>
   );
 }
 
