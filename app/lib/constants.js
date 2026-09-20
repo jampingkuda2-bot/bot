@@ -33,6 +33,7 @@ export const SIZE_PRESETS = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 
 const DEFAULT_TABLE = () => ({
   headerRow: true,
+  numbering: true,
   rows: [
     ['Kolom A', 'Kolom B', 'Kolom C'],
     ['', '', ''],
@@ -127,8 +128,12 @@ export const normalizeDoc = (d) => {
       fontFamily: s.fontFamily || '',
       fontSize: s.fontSize || 0,
       tableData: s.type === 'table'
-        ? (s.tableData || DEFAULT_TABLE())
-        : (s.tableData || null),
+        ? {
+            headerRow: s.tableData?.headerRow !== false,
+            numbering: s.tableData?.numbering !== false,
+            rows: s.tableData?.rows || DEFAULT_TABLE().rows,
+          }
+        : null,
     }));
   } else {
     merged.sections = base.sections;
