@@ -26,6 +26,19 @@ export const ACCENT_PRESETS = [
 export const STORAGE_KEY = 'pdfstudio.doc.v2';
 export const THEME_KEY = 'pdfstudio.theme';
 
+export const uid = () =>
+  's_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+
+const makeSection = (heading, body) => ({
+  id: uid(),
+  heading,
+  body,
+  align: 'left',
+  breakBefore: false,
+  offsetX: 0,
+  offsetY: 0,
+});
+
 export const buildInitialDoc = () => ({
   title: 'Judul Dokumen Anda',
   subtitle: 'Subjudul atau deskripsi singkat',
@@ -62,16 +75,35 @@ export const buildInitialDoc = () => ({
   logoSize: 56,
   locked: false,
   sections: [
-    { heading: 'Pendahuluan', body: 'Selamat datang di PDF Studio. Ubah semua teks di panel kiri.', align: 'left', breakBefore: false },
-    { heading: 'Fitur Utama', body: '• Editor lengkap\n• Export PDF multi-halaman\n• Nomor halaman otomatis', align: 'left', breakBefore: false },
+    makeSection('Pendahuluan', 'Selamat datang di PDF Studio. Ubah semua teks di panel kiri.'),
+    makeSection('Fitur Utama', '• Editor lengkap\n• Export PDF multi-halaman\n• Nomor halaman otomatis'),
   ],
 });
+
+export const normalizeDoc = (d) => {
+  const base = buildInitialDoc();
+  const merged = { ...base, ...d };
+  if (Array.isArray(merged.sections)) {
+    merged.sections = merged.sections.map((s) => ({
+      ...s,
+      id: s.id || uid(),
+      offsetX: s.offsetX ?? 0,
+      offsetY: s.offsetY ?? 0,
+      align: s.align || 'left',
+      breakBefore: !!s.breakBefore,
+    }));
+  } else {
+    merged.sections = base.sections;
+  }
+  return merged;
+};
 
 export const loadLocal = (key, fallback) => {
   if (typeof window === 'undefined') return fallback;
   try {
     const v = localStorage.getItem(key);
-    return v ? { ...fallback, ...JSON.parse(v) } : fallback;
+    if (!v) return fallback;
+    return normalizeDoc(JSON.parse(v));
   } catch { return fallback; }
 };
 
