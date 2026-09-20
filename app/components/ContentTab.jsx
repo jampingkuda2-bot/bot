@@ -17,6 +17,7 @@ export default function ContentTab({
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
   const subtitleGap = doc.subtitleGap ?? 8;
+  const authorAlign = doc.authorAlign || 'split';
 
   return (
     <>
@@ -125,6 +126,37 @@ export default function ContentTab({
             rows={2}
             className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
           />
+        </Field>
+
+        <Field label="Posisi Penulis & Tanggal">
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { v: 'split',  label: 'Terpisah' },
+              { v: 'title',  label: 'Ikuti Judul' },
+              { v: 'left',   label: 'Kiri' },
+              { v: 'center', label: 'Tengah' },
+              { v: 'right',  label: 'Kanan' },
+            ].map((o) => (
+              <button
+                key={o.v}
+                onClick={() => update({ authorAlign: o.v })}
+                className={`px-3 py-2 rounded-lg border text-xs font-medium transition ${
+                  authorAlign === o.v
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
+                } ${o.v === 'split' ? 'col-span-2' : ''}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-neutral-500 mt-2">
+            {authorAlign === 'split'
+              ? 'Penulis di kiri, tanggal di kanan.'
+              : authorAlign === 'title'
+              ? 'Penulis & tanggal mengikuti perataan judul.'
+              : 'Penulis & tanggal rata ' + authorAlign + '.'}
+          </p>
         </Field>
 
         <Field label="Tanggal">
