@@ -173,9 +173,9 @@ export default function Home() {
         onChange={importJson}
       />
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_1fr] min-h-0">
-        <aside className="border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col min-h-0 lg:max-h-[calc(100vh-57px)]">
+        <aside className="border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col min-h-0 lg:max-h-[calc(100vh-53px)]">
           <Tabs tab={tab} setTab={setTab} />
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="flex-1 overflow-y-auto p-2.5 lg:p-4 space-y-3.5 lg:space-y-5">
             {tab === 'content' && (
               <ContentTab
                 doc={doc}
