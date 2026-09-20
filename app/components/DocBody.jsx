@@ -82,6 +82,8 @@ function CoverPage({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const locked = !!doc.locked;
   const canDrag = !locked;
+  const titleScale = doc.titleScale || 1;
+  const logoSize = doc.logoSize || 56;
 
   return (
     <div
@@ -107,8 +109,8 @@ function CoverPage({ doc, plain, update, zoom }) {
           onPointerDown={onDragLogo}
           title={canDrag ? 'Geser logo untuk memindahkan' : 'Terkunci'}
           style={{
-            maxHeight: 90,
-            maxWidth: 220,
+            maxHeight: Math.round(logoSize * 1.6),
+            maxWidth: Math.round(logoSize * 1.6 * 2.4),
             objectFit: 'contain',
             marginBottom: 48,
             ...draggableStyle(
@@ -125,7 +127,7 @@ function CoverPage({ doc, plain, update, zoom }) {
         onPointerDown={onDragTitle}
         title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
         style={{
-          fontSize: '2.8em',
+          fontSize: `${2.8 * titleScale}em`,
           fontWeight: 800,
           color: plain ? '#111827' : '#0f172a',
           margin: 0,
@@ -167,6 +169,8 @@ function ContentSections({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const locked = !!doc.locked;
   const canDrag = !locked;
+  const titleScale = doc.titleScale || 1;
+  const logoSize = doc.logoSize || 56;
 
   return (
     <>
@@ -204,8 +208,8 @@ function ContentSections({ doc, plain, update, zoom }) {
               onPointerDown={onDragLogo}
               title={canDrag ? 'Geser logo untuk memindahkan' : 'Terkunci'}
               style={{
-                height: 56,
-                maxWidth: 120,
+                height: logoSize,
+                maxWidth: logoSize * 2.4,
                 objectFit: 'contain',
                 ...draggableStyle(
                   { x: doc.logoOffsetX, y: doc.logoOffsetY },
@@ -219,7 +223,7 @@ function ContentSections({ doc, plain, update, zoom }) {
               onPointerDown={onDragTitle}
               title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
               style={{
-                fontSize: '2em',
+                fontSize: `${2 * titleScale}em`,
                 fontWeight: 800,
                 color: plain ? '#111827' : doc.accent,
                 margin: 0,
