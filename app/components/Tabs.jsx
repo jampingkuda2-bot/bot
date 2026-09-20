@@ -9,7 +9,7 @@ const TABS = [
 
 export default function Tabs({ tab, setTab }) {
   return (
-    <div className="border-b border-neutral-200 dark:border-neutral-800 grid grid-cols-4">
+    <div className="border-b border-neutral-200 dark:border-neutral-800 grid grid-cols-4 bg-white dark:bg-neutral-900">
       {TABS.map((t) => {
         const Icon = t.icon;
         const active = tab === t.id;
@@ -17,7 +17,7 @@ export default function Tabs({ tab, setTab }) {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition relative ${
+            className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition relative ${
               active
                 ? 'text-neutral-900 dark:text-white'
                 : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
