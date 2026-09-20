@@ -69,7 +69,15 @@ function CoverPage({ doc, plain }) {
         </p>
       )}
       <div style={{ marginTop: 64, fontSize: '0.9em', color: '#64748b' }}>
-        <div style={{ fontWeight: 600, color: '#334155' }}>{doc.author}</div>
+        <div
+          style={{
+            fontWeight: 600,
+            color: plain ? '#111827' : '#334155',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {doc.author}
+        </div>
         <div>{doc.date}</div>
       </div>
     </div>
@@ -96,8 +104,8 @@ function ContentSections({ doc, plain }) {
       {!doc.showCover && (
         <header
           style={{
-            borderBottom: plain ? '1px solid #e5e7eb' : `2px solid ${doc.accent}`,
-            paddingBottom: 20,
+            borderBottom: plain ? 'none' : `2px solid ${doc.accent}`,
+            paddingBottom: plain ? 0 : 20,
             marginBottom: 32,
             display: 'flex',
             alignItems: 'flex-end',
@@ -131,12 +139,18 @@ function ContentSections({ doc, plain }) {
                 marginTop: 14,
                 display: 'flex',
                 justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 16,
                 fontSize: '0.82em',
-                color: '#9ca3af',
+                color: plain ? '#111827' : '#9ca3af',
               }}
             >
-              <span>{doc.author}</span>
-              <span>{doc.date}</span>
+              <span style={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}>
+                {doc.author}
+              </span>
+              <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                {doc.date}
+              </span>
             </div>
           </div>
         </header>
