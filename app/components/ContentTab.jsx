@@ -1,6 +1,5 @@
 import {
   Plus, Upload, Image as ImageIcon,
-  AlignLeft, AlignCenter, AlignRight,
   RotateCcw, Lock, Unlock,
 } from 'lucide-react';
 import { Group, Field, TextInput, Toggle } from './ui';
@@ -10,14 +9,13 @@ export default function ContentTab({
   doc, update, updateSection, addSection,
   removeSection, moveSection, duplicateSection, onLogoChange,
 }) {
-  const titleAlign = doc.titleAlign || 'left';
   const hasTitleOffset = (doc.titleOffsetX || 0) !== 0 || (doc.titleOffsetY || 0) !== 0;
   const hasLogoOffset = (doc.logoOffsetX || 0) !== 0 || (doc.logoOffsetY || 0) !== 0;
+  const hasAuthorOffset = (doc.authorOffsetX || 0) !== 0 || (doc.authorOffsetY || 0) !== 0;
   const locked = !!doc.locked;
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
   const subtitleGap = doc.subtitleGap ?? 8;
-  const authorAlign = doc.authorAlign || 'split';
 
   return (
     <>
@@ -31,55 +29,26 @@ export default function ContentTab({
           }`}
         >
           {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          {locked ? 'Terkunci — klik untuk buka' : 'Kunci posisi judul & logo'}
+          {locked ? 'Terkunci — klik untuk buka' : 'Kunci posisi judul, logo & penulis'}
         </button>
         {locked && (
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
-            🔒 Judul & logo tidak bisa digeser tidak sengaja.
+            🔒 Semua elemen terkunci. Tidak bisa digeser tidak sengaja.
           </p>
         )}
+      </div>
+
+      <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 p-3 mb-4">
+        <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
+          💡 <b>Tips:</b> Geser judul, logo, atau penulis <b>langsung di preview</b>.
+          Arahkan kursor ke elemen → muncul toolbar untuk <b>geser halus (&lt; &gt;)</b>,
+          <b> rata kanan/kiri/tengah</b>, dan <b>reset</b>.
+        </p>
       </div>
 
       <Group title="Informasi Dokumen">
         <Field label="Judul">
           <TextInput value={doc.title} onChange={(v) => update({ title: v })} placeholder="Judul dokumen" />
-        </Field>
-
-        <Field label="Posisi Judul">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
-              {[
-                { v: 'left',   Icon: AlignLeft,   title: 'Kiri' },
-                { v: 'center', Icon: AlignCenter, title: 'Tengah' },
-                { v: 'right',  Icon: AlignRight,  title: 'Kanan' },
-              ].map(({ v, Icon, title }) => (
-                <button
-                  key={v}
-                  onClick={() => update({ titleAlign: v })}
-                  title={title}
-                  className={`p-1.5 rounded-md transition ${
-                    titleAlign === v
-                      ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white'
-                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                </button>
-              ))}
-            </div>
-            {(hasTitleOffset || titleScale !== 1) && (
-              <button
-                onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0, titleScale: 1 })}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Reset
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-neutral-500 mt-2">
-            💡 Geser judul langsung di preview. Subjudul otomatis mengikuti.
-          </p>
         </Field>
 
         <Field label={`Ukuran Judul — ${Math.round(titleScale * 100)}%`}>
@@ -93,6 +62,16 @@ export default function ContentTab({
             className="w-full"
           />
         </Field>
+
+        {hasTitleOffset && (
+          <button
+            onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0 })}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset posisi judul
+          </button>
+        )}
 
         <Field label="Subjudul">
           <textarea
@@ -128,36 +107,15 @@ export default function ContentTab({
           />
         </Field>
 
-        <Field label="Posisi Penulis & Tanggal">
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { v: 'split',  label: 'Terpisah' },
-              { v: 'title',  label: 'Ikuti Judul' },
-              { v: 'left',   label: 'Kiri' },
-              { v: 'center', label: 'Tengah' },
-              { v: 'right',  label: 'Kanan' },
-            ].map((o) => (
-              <button
-                key={o.v}
-                onClick={() => update({ authorAlign: o.v })}
-                className={`px-3 py-2 rounded-lg border text-xs font-medium transition ${
-                  authorAlign === o.v
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                } ${o.v === 'split' ? 'col-span-2' : ''}`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-neutral-500 mt-2">
-            {authorAlign === 'split'
-              ? 'Penulis di kiri, tanggal di kanan.'
-              : authorAlign === 'title'
-              ? 'Penulis & tanggal mengikuti perataan judul.'
-              : 'Penulis & tanggal rata ' + authorAlign + '.'}
-          </p>
-        </Field>
+        {hasAuthorOffset && (
+          <button
+            onClick={() => update({ authorOffsetX: 0, authorOffsetY: 0 })}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset posisi penulis
+          </button>
+        )}
 
         <Field label="Tanggal">
           <TextInput value={doc.date} onChange={(v) => update({ date: v })} />
@@ -213,10 +171,6 @@ export default function ContentTab({
                 Reset logo
               </button>
             )}
-
-            <p className="text-[11px] text-neutral-500">
-              💡 Geser logo langsung di preview.
-            </p>
           </>
         )}
 
