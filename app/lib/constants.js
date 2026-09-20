@@ -50,8 +50,10 @@ export const buildInitialDoc = () => ({
   titleAlign: 'left',
   titleOffsetX: 0,
   titleOffsetY: 0,
+  titleScale: 1,
   logoOffsetX: 0,
   logoOffsetY: 0,
+  logoSize: 56,
   locked: false,
   sections: [
     { heading: 'Pendahuluan', body: 'Selamat datang di PDF Studio. Ubah semua teks di panel kiri.', align: 'left', breakBefore: false },
