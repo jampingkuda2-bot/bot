@@ -7,7 +7,7 @@ import {
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
 
-const PADDING_TOP = 24;
+const PADDING_TOP = 16;
 
 export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
   const page = PAGE_SIZES[doc.pageSize];
@@ -19,15 +19,18 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   const scrollRef = useRef(null);
   const margin = doc.showCover ? 0 : doc.margin;
 
-  // pagination
+  // pagination + count
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
+
     const applyPagination = () => {
       el.querySelectorAll('[data-spacer]').forEach((s) => s.remove());
+
       const scale = zoom || 1;
       const elTop = el.getBoundingClientRect().top;
       const blocks = Array.from(el.querySelectorAll('[data-block]'));
+
       blocks.forEach((block) => {
         const rect = block.getBoundingClientRect();
         const top = (rect.top - elTop) / scale;
@@ -37,9 +40,11 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         const manualBreak = block.dataset.pageBreak === 'true';
         const crosses = top + height > pageEnd - 4;
         const fitsOnOnePage = height + 32 <= pageH;
+
         let pushDown = 0;
         if (manualBreak && top > pageStart + 2) pushDown = pageEnd - top;
         else if (crosses && fitsOnOnePage) pushDown = pageEnd - top;
+
         if (pushDown > 2 && pushDown < pageH) {
           const spacer = document.createElement('div');
           spacer.setAttribute('data-spacer', '1');
@@ -48,29 +53,45 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
           block.parentNode.insertBefore(spacer, block);
         }
       });
+
+      // Hitung halaman berdasarkan posisi bawah blok terakhir
       requestAnimationFrame(() => {
-        const h = el.scrollHeight;
-        setPages(Math.max(1, Math.ceil((h - 4) / pageH)));
+        const newElTop = el.getBoundingClientRect().top;
+        const fresh = el.querySelectorAll('[data-block]');
+        if (fresh.length === 0) {
+          setPages(1);
+          return;
+        }
+        let maxBottom = 0;
+        fresh.forEach((b) => {
+          const r = b.getBoundingClientRect();
+          const bottom = (r.bottom - newElTop) / scale;
+          if (bottom > maxBottom) maxBottom = bottom;
+        });
+        // Tambah padding bawah (kecuali cover, karena padding sudah di dalam DocBody)
+        const total = maxBottom + (doc.showCover ? 0 : doc.margin);
+        const count = Math.max(1, Math.ceil((total - 8) / pageH));
+        setPages(count);
       });
     };
+
     const t = setTimeout(applyPagination, 60);
     return () => clearTimeout(t);
   }, [doc, pageH, previewRef, zoom]);
 
-  // reset current page kalau doc menyusut
+  // Clamp current page
   useEffect(() => {
     if (currentPage > pages) setCurrentPage(pages);
   }, [pages, currentPage]);
 
-  // auto update indikator halaman saat scroll
+  // Update indikator halaman saat scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       const top = el.scrollTop - PADDING_TOP;
       const p = Math.round(top / (pageH * zoom)) + 1;
-      const clamped = Math.max(1, Math.min(pages, p));
-      setCurrentPage(clamped);
+      setCurrentPage(Math.max(1, Math.min(pages, p)));
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
@@ -88,7 +109,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     }
   };
 
-  // swipe gesture (mobile)
+  // Swipe gesture (mobile)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -96,6 +117,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     const onStart = (e) => {
       if (e.pointerType !== 'touch') return;
       if (e.target.closest && e.target.closest('[data-draggable]')) return;
+      if (e.target.closest && e.target.closest('[data-toolbar]')) return;
       active = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -125,12 +147,11 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="inline-flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5" />
-            Preview
+            <span className="hidden sm:inline">Preview</span>
           </span>
           <span className="hidden md:inline">· {mmW}×{mmH} mm</span>
         </div>
 
-        {/* Page nav */}
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
           <button
             onClick={() => scrollToPage(currentPage - 1)}
@@ -140,7 +161,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <span className="text-xs tabular-nums px-2 font-medium min-w-[52px] text-center">
+          <span className="text-xs tabular-nums px-2 font-medium min-w-[56px] text-center">
             {currentPage} / {pages}
           </span>
           <button
@@ -153,7 +174,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
           </button>
         </div>
 
-        {/* Zoom */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))}
@@ -230,7 +250,7 @@ function PageBreakOverlay({ pageH, zoom, totalHeight }) {
         <div
           key={i}
           className="absolute left-0 right-0 pointer-events-none z-10"
-          style={{ top: (i + 1) * pageH * zoom }}
+          style={{ top: (i + 1) * pageH * zoom + PADDING_TOP }}
         >
           <div className="border-t border-dashed border-blue-400/60" />
           <div className="absolute right-0 -top-2.5 text-[10px] font-medium text-blue-500 bg-white px-1.5 rounded">
