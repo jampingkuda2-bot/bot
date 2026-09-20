@@ -1,23 +1,7 @@
 'use client';
 
-import {
-  AlignLeft, AlignCenter, AlignRight, ArrowLeftRight,
-} from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DragTarget from './DragTarget';
-
-const TITLE_ALIGN_OPTS = [
-  { value: 'left',   title: 'Rata kiri',   icon: AlignLeft },
-  { value: 'center', title: 'Rata tengah', icon: AlignCenter },
-  { value: 'right',  title: 'Rata kanan',  icon: AlignRight },
-];
-
-const AUTHOR_ALIGN_OPTS = [
-  { value: 'split',  title: 'Terpisah',    icon: ArrowLeftRight },
-  { value: 'left',   title: 'Rata kiri',   icon: AlignLeft },
-  { value: 'center', title: 'Rata tengah', icon: AlignCenter },
-  { value: 'right',  title: 'Rata kanan',  icon: AlignRight },
-];
 
 const SUBTITLE_COLOR = '#111827';
 const AUTHOR_COLOR = '#111827';
@@ -34,14 +18,13 @@ function sectionHasContent(s) {
   return !!(s.heading && s.heading.trim()) || !!(s.body && s.body.trim());
 }
 
-// Konten yang muncul DI BAWAH cover (tidak termasuk judul/penulis/logo)
 function hasPostCoverContent(doc) {
   if (doc.headerText && doc.headerText.trim()) return true;
   if (doc.footerText && doc.footerText.trim()) return true;
   return doc.sections.some(sectionHasContent);
 }
 
-export default function DocBody({ doc, update, zoom = 1 }) {
+export default function DocBody({ doc, update, zoom = 1, selected, onSelect }) {
   const isPlain = !!doc.plain;
   const d = isPlain
     ? { ...doc, accent: '#111827', headingStyle: 'plain' }
@@ -51,29 +34,29 @@ export default function DocBody({ doc, update, zoom = 1 }) {
   if (d.showCover) {
     return (
       <>
-        <CoverPage doc={d} plain={isPlain} update={update} zoom={zoom} />
+        <CoverPage doc={d} plain={isPlain} update={update} zoom={zoom} selected={selected} onSelect={onSelect} />
         {hasPostCoverContent(d) && (
           <div style={{ padding: p, position: 'relative' }}>
-            <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />
+            <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} selected={selected} onSelect={onSelect} />
           </div>
         )}
       </>
     );
   }
 
-  return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />;
+  return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} selected={selected} onSelect={onSelect} />;
 }
 
-function LogoImg({ doc, update, zoom, size }) {
+function LogoImg({ doc, update, zoom, size, selected, onSelect }) {
   return (
     <DragTarget
       id="logo"
       doc={doc}
       update={update}
       zoom={zoom}
+      selected={selected === 'logo'}
+      onSelect={onSelect}
       style={{ display: 'inline-block', flexShrink: 0, alignSelf: 'flex-end' }}
-      onDelete={() => update({ logo: null })}
-      deleteTitle="Hapus logo"
     >
       <img
         src={doc.logo}
@@ -91,7 +74,7 @@ function LogoImg({ doc, update, zoom, size }) {
   );
 }
 
-function TitleBlock({ doc, update, zoom, plain, size, align }) {
+function TitleBlock({ doc, update, zoom, plain, size, align, selected, onSelect }) {
   if (!hasTitle(doc)) return null;
   const gap = doc.subtitleGap ?? 8;
   return (
@@ -100,11 +83,9 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
       doc={doc}
       update={update}
       zoom={zoom}
-      alignKey="titleAlign"
-      alignOptions={TITLE_ALIGN_OPTS}
+      selected={selected === 'title'}
+      onSelect={onSelect}
       style={{ textAlign: align, width: '100%' }}
-      onDelete={() => update({ title: '', subtitle: '' })}
-      deleteTitle="Hapus judul & subjudul"
     >
       <h1
         style={{
@@ -134,7 +115,7 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
   );
 }
 
-function AuthorBlock({ doc, update, zoom }) {
+function AuthorBlock({ doc, update, zoom, selected, onSelect }) {
   if (!hasAuthor(doc)) return null;
   const align = doc.authorAlign || 'split';
   const size = doc.authorFontSize || 0.82;
@@ -146,8 +127,8 @@ function AuthorBlock({ doc, update, zoom }) {
       doc={doc}
       update={update}
       zoom={zoom}
-      alignKey="authorAlign"
-      alignOptions={AUTHOR_ALIGN_OPTS}
+      selected={selected === 'author'}
+      onSelect={onSelect}
       style={{
         marginTop: 14,
         fontSize: `${size}em`,
@@ -157,8 +138,6 @@ function AuthorBlock({ doc, update, zoom }) {
         paddingTop: 4,
         paddingBottom: 4,
       }}
-      onDelete={() => update({ author: '', date: '' })}
-      deleteTitle="Hapus penulis & tanggal"
     >
       {align === 'split' ? (
         <div
@@ -186,7 +165,7 @@ function AuthorBlock({ doc, update, zoom }) {
   );
 }
 
-function CoverPage({ doc, plain, update, zoom }) {
+function CoverPage({ doc, plain, update, zoom, selected, onSelect }) {
   const align = doc.titleAlign || 'left';
   const titleScale = doc.titleScale || 1;
   const logoSize = doc.logoSize || 56;
@@ -210,7 +189,14 @@ function CoverPage({ doc, plain, update, zoom }) {
     >
       {doc.logo && (
         <div style={{ marginBottom: 48, alignSelf: 'center' }}>
-          <LogoImg doc={doc} update={update} zoom={zoom} size={Math.round(logoSize * 1.6)} />
+          <LogoImg
+            doc={doc}
+            update={update}
+            zoom={zoom}
+            size={Math.round(logoSize * 1.6)}
+            selected={selected}
+            onSelect={onSelect}
+          />
         </div>
       )}
       {!plain && (
@@ -232,16 +218,24 @@ function CoverPage({ doc, plain, update, zoom }) {
           plain={plain}
           size={2.8 * titleScale}
           align={align}
+          selected={selected}
+          onSelect={onSelect}
         />
       </div>
       <div style={{ marginTop: 64, width: '100%' }}>
-        <AuthorBlock doc={doc} update={update} zoom={zoom} />
+        <AuthorBlock
+          doc={doc}
+          update={update}
+          zoom={zoom}
+          selected={selected}
+          onSelect={onSelect}
+        />
       </div>
     </div>
   );
 }
 
-function ContentSections({ doc, plain, update, zoom }) {
+function ContentSections({ doc, plain, update, zoom, selected, onSelect }) {
   const align = doc.titleAlign || 'left';
   const logoSize = doc.logoSize || 56;
   const showHeader = doc.logo || hasTitle(doc) || hasAuthor(doc);
@@ -277,7 +271,14 @@ function ContentSections({ doc, plain, update, zoom }) {
           }}
         >
           {doc.logo && (
-            <LogoImg doc={doc} update={update} zoom={zoom} size={logoSize} />
+            <LogoImg
+              doc={doc}
+              update={update}
+              zoom={zoom}
+              size={logoSize}
+              selected={selected}
+              onSelect={onSelect}
+            />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <TitleBlock
@@ -287,8 +288,16 @@ function ContentSections({ doc, plain, update, zoom }) {
               plain={plain}
               size={2 * (doc.titleScale || 1)}
               align={align}
+              selected={selected}
+              onSelect={onSelect}
             />
-            <AuthorBlock doc={doc} update={update} zoom={zoom} />
+            <AuthorBlock
+              doc={doc}
+              update={update}
+              zoom={zoom}
+              selected={selected}
+              onSelect={onSelect}
+            />
           </div>
         </header>
       )}
