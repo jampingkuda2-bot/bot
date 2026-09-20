@@ -14,6 +14,11 @@ function hasAuthor(doc) {
   return !!(doc.author && doc.author.trim()) || !!(doc.date && doc.date.trim());
 }
 function sectionHasContent(s) {
+  if (s.type === 'table') {
+    if (s.heading && s.heading.trim()) return true;
+    const rows = s.tableData?.rows || [];
+    return rows.some((row) => row.some((cell) => cell && cell.trim()));
+  }
   return !!(s.heading && s.heading.trim()) || !!(s.body && s.body.trim());
 }
 function hasPostCoverContent(doc) {
@@ -106,6 +111,10 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
   }, [offsetX, offsetY, locked, zoom, onChange, onSelect, selected]);
 
   const isDraggable = selected && !locked;
+  const sectionFont = section.fontFamily || 'inherit';
+  const sectionSize = section.fontSize && section.fontSize > 0
+    ? `${section.fontSize}px`
+    : 'inherit';
 
   return (
     <div
@@ -120,6 +129,8 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
         outline: selected && !locked ? '2px solid rgba(37,99,235,0.85)' : 'none',
         outlineOffset: 4,
         borderRadius: 4,
+        fontFamily: sectionFont,
+        fontSize: sectionSize,
       }}
     >
       {children}
@@ -278,11 +289,21 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
             style={{ marginBottom: 28, pageBreakInside: 'avoid' }}
           >
             <SectionHeading text={s.heading} style={doc.headingStyle} color={doc.accent} plain={plain} />
-            {s.body && (
-              <p style={{
-                whiteSpace: 'pre-wrap', margin: 0,
-                textAlign: s.align || 'left', color: '#1f2937',
-              }}>{s.body}</p>
+
+            {s.type === 'table' ? (
+              <TableBlock
+                tableData={s.tableData}
+                accent={doc.accent}
+                plain={plain}
+                align={s.align || 'left'}
+              />
+            ) : (
+              s.body && (
+                <p style={{
+                  whiteSpace: 'pre-wrap', margin: 0,
+                  textAlign: s.align || 'left', color: '#1f2937',
+                }}>{s.body}</p>
+              )
             )}
           </div>
         </SectionWrapper>
@@ -295,6 +316,56 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
         }}>{doc.footerText}</footer>
       )}
     </>
+  );
+}
+
+function TableBlock({ tableData, accent, plain, align }) {
+  const rows = tableData?.rows || [];
+  const headerRow = tableData?.headerRow !== false;
+  if (rows.length === 0 || rows[0].length === 0) return null;
+
+  return (
+    <div style={{
+      width: '100%',
+      display: 'flex',
+      justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+    }}>
+      <table style={{
+        borderCollapse: 'collapse',
+        width: '100%',
+        fontSize: '0.92em',
+        pageBreakInside: 'avoid',
+      }}>
+        <tbody>
+          {rows.map((row, ri) => {
+            const isHeader = headerRow && ri === 0;
+            return (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    style={{
+                      border: '1px solid #d1d5db',
+                      padding: '6px 10px',
+                      textAlign: 'left',
+                      verticalAlign: 'top',
+                      color: isHeader ? '#ffffff' : '#1f2937',
+                      background: isHeader
+                        ? (plain ? '#111827' : accent)
+                        : '#ffffff',
+                      fontWeight: isHeader ? 600 : 400,
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {cell || '\u00A0'}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -328,4 +399,4 @@ function SectionHeading({ text, style: s, color, plain }) {
   }
 
   return <h2 style={{ fontSize: '1.25em', fontWeight: 700, color, margin: '0 0 10px' }}>{text}</h2>;
-}
+            }
