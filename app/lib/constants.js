@@ -29,14 +29,43 @@ export const THEME_KEY = 'pdfstudio.theme';
 export const uid = () =>
   's_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
 
+export const SIZE_PRESETS = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+
+const DEFAULT_TABLE = () => ({
+  headerRow: true,
+  rows: [
+    ['Kolom A', 'Kolom B', 'Kolom C'],
+    ['', '', ''],
+    ['', '', ''],
+  ],
+});
+
 const makeSection = (heading, body) => ({
   id: uid(),
+  type: 'text',
   heading,
   body,
   align: 'left',
   breakBefore: false,
   offsetX: 0,
   offsetY: 0,
+  fontFamily: '',
+  fontSize: 0,
+  tableData: null,
+});
+
+const makeTable = (heading) => ({
+  id: uid(),
+  type: 'table',
+  heading: heading || 'Tabel Baru',
+  body: '',
+  align: 'left',
+  breakBefore: false,
+  offsetX: 0,
+  offsetY: 0,
+  fontFamily: '',
+  fontSize: 0,
+  tableData: DEFAULT_TABLE(),
 });
 
 export const buildInitialDoc = () => ({
@@ -80,6 +109,9 @@ export const buildInitialDoc = () => ({
   ],
 });
 
+export const createTextSection = () => makeSection('Bagian Baru', '');
+export const createTableSection = () => makeTable('Tabel Baru');
+
 export const normalizeDoc = (d) => {
   const base = buildInitialDoc();
   const merged = { ...base, ...d };
@@ -87,10 +119,16 @@ export const normalizeDoc = (d) => {
     merged.sections = merged.sections.map((s) => ({
       ...s,
       id: s.id || uid(),
+      type: s.type || 'text',
       offsetX: s.offsetX ?? 0,
       offsetY: s.offsetY ?? 0,
       align: s.align || 'left',
       breakBefore: !!s.breakBefore,
+      fontFamily: s.fontFamily || '',
+      fontSize: s.fontSize || 0,
+      tableData: s.type === 'table'
+        ? (s.tableData || DEFAULT_TABLE())
+        : (s.tableData || null),
     }));
   } else {
     merged.sections = base.sections;
