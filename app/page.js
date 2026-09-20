@@ -193,6 +193,7 @@ export default function Home() {
         </aside>
         <PreviewPanel
           doc={doc}
+          update={update}
           pageW={pageW}
           pageH={pageH}
           zoom={zoom}
@@ -202,4 +203,4 @@ export default function Home() {
       </div>
     </div>
   );
-  }
+}
