@@ -47,6 +47,9 @@ export const buildInitialDoc = () => ({
   footerText: '',
   showPageNumbers: true,
   watermark: '',
+  titleAlign: 'left',
+  titleOffsetX: 0,
+  titleOffsetY: 0,
   sections: [
     { heading: 'Pendahuluan', body: 'Selamat datang di PDF Studio. Ubah semua teks di panel kiri.', align: 'left', breakBefore: false },
     { heading: 'Fitur Utama', body: '• Editor lengkap\n• Export PDF multi-halaman\n• Nomor halaman otomatis', align: 'left', breakBefore: false },
