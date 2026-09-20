@@ -359,7 +359,7 @@ function TableBlock({ tableData, align }) {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {isHeader ? '#' : dataIndex + 1}
+                    {isHeader ? 'No.' : dataIndex + 1}
                   </td>
                 )}
                 {row.map((cell, ci) => (
