@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Eye, ZoomIn, ZoomOut, ChevronsUpDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Eye, ZoomIn, ZoomOut, ChevronsUpDown, ChevronLeft, ChevronRight,
+} from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
+
+const PADDING_TOP = 24;
 
 export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
   const page = PAGE_SIZES[doc.pageSize];
@@ -11,88 +15,184 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   const mmW = isL ? page.mmH : page.mmW;
   const mmH = isL ? page.mmW : page.mmH;
   const [pages, setPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const scrollRef = useRef(null);
   const margin = doc.showCover ? 0 : doc.margin;
 
+  // pagination
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
-
     const applyPagination = () => {
       el.querySelectorAll('[data-spacer]').forEach((s) => s.remove());
-
       const scale = zoom || 1;
       const elTop = el.getBoundingClientRect().top;
       const blocks = Array.from(el.querySelectorAll('[data-block]'));
-
       blocks.forEach((block) => {
         const rect = block.getBoundingClientRect();
         const top = (rect.top - elTop) / scale;
         const height = rect.height / scale;
-
         const pageStart = Math.floor(top / pageH) * pageH;
         const pageEnd = pageStart + pageH;
-
         const manualBreak = block.dataset.pageBreak === 'true';
         const crosses = top + height > pageEnd - 4;
         const fitsOnOnePage = height + 32 <= pageH;
-
         let pushDown = 0;
-        if (manualBreak && top > pageStart + 2) {
-          pushDown = pageEnd - top;
-        } else if (crosses && fitsOnOnePage) {
-          pushDown = pageEnd - top;
-        }
-
+        if (manualBreak && top > pageStart + 2) pushDown = pageEnd - top;
+        else if (crosses && fitsOnOnePage) pushDown = pageEnd - top;
         if (pushDown > 2 && pushDown < pageH) {
           const spacer = document.createElement('div');
           spacer.setAttribute('data-spacer', '1');
           spacer.style.height = pushDown + 'px';
-          spacer.style.background = 'transparent';
           spacer.style.pointerEvents = 'none';
           block.parentNode.insertBefore(spacer, block);
         }
       });
-
       requestAnimationFrame(() => {
         const h = el.scrollHeight;
         setPages(Math.max(1, Math.ceil((h - 4) / pageH)));
       });
     };
-
     const t = setTimeout(applyPagination, 60);
     return () => clearTimeout(t);
   }, [doc, pageH, previewRef, zoom]);
 
+  // reset current page kalau doc menyusut
+  useEffect(() => {
+    if (currentPage > pages) setCurrentPage(pages);
+  }, [pages, currentPage]);
+
+  // auto update indikator halaman saat scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const top = el.scrollTop - PADDING_TOP;
+      const p = Math.round(top / (pageH * zoom)) + 1;
+      const clamped = Math.max(1, Math.min(pages, p));
+      setCurrentPage(clamped);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [pageH, zoom, pages]);
+
+  const scrollToPage = (n) => {
+    const target = Math.max(1, Math.min(pages, n));
+    setCurrentPage(target);
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTo({
+        top: PADDING_TOP + (target - 1) * pageH * zoom,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  // swipe gesture (mobile)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let startX = 0, startY = 0, active = false;
+    const onStart = (e) => {
+      if (e.pointerType !== 'touch') return;
+      if (e.target.closest && e.target.closest('[data-draggable]')) return;
+      active = true;
+      startX = e.clientX;
+      startY = e.clientY;
+    };
+    const onEnd = (e) => {
+      if (!active) return;
+      active = false;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) scrollToPage(currentPage + 1);
+        else scrollToPage(currentPage - 1);
+      }
+    };
+    el.addEventListener('pointerdown', onStart);
+    el.addEventListener('pointerup', onEnd);
+    return () => {
+      el.removeEventListener('pointerdown', onStart);
+      el.removeEventListener('pointerup', onEnd);
+    };
+  }, [currentPage, pages, pageH, zoom]);
+
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
-      <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-neutral-500">
+      {/* Toolbar */}
+      <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur px-3 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="inline-flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5" />
             Preview
           </span>
-          <span className="hidden sm:inline">{mmW}×{mmH} mm</span>
-          <span>·</span>
-          <span>{pages} halaman</span>
+          <span className="hidden md:inline">· {mmW}×{mmH} mm</span>
         </div>
+
+        {/* Page nav */}
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+          <button
+            onClick={() => scrollToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="p-1.5 rounded-md hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            title="Halaman sebelumnya"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-xs tabular-nums px-2 font-medium min-w-[52px] text-center">
+            {currentPage} / {pages}
+          </span>
+          <button
+            onClick={() => scrollToPage(currentPage + 1)}
+            disabled={currentPage >= pages}
+            className="p-1.5 rounded-md hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            title="Halaman berikutnya"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Zoom */}
         <div className="flex items-center gap-1">
-          <ZoomBtn onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))}>
+          <button
+            onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+            title="Zoom out"
+          >
             <ZoomOut className="w-4 h-4" />
-          </ZoomBtn>
-          <span className="text-xs w-12 text-center tabular-nums">
+          </button>
+          <span className="text-xs w-10 text-center tabular-nums">
             {Math.round(zoom * 100)}%
           </span>
-          <ZoomBtn onClick={() => setZoom(Math.min(1.6, +(zoom + 0.1).toFixed(2)))}>
+          <button
+            onClick={() => setZoom(Math.min(1.6, +(zoom + 0.1).toFixed(2)))}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+            title="Zoom in"
+          >
             <ZoomIn className="w-4 h-4" />
-          </ZoomBtn>
-          <ZoomBtn onClick={() => setZoom(0.75)}>
+          </button>
+          <button
+            onClick={() => setZoom(0.75)}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+            title="Fit"
+          >
             <ChevronsUpDown className="w-4 h-4" />
-          </ZoomBtn>
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 lg:p-10">
-        <div style={{ width: pageW * zoom, margin: '0 auto', position: 'relative' }}>
+      {/* Scroll area */}
+      <div ref={scrollRef} className="flex-1 overflow-auto">
+        <div
+          style={{
+            width: pageW * zoom,
+            margin: '0 auto',
+            paddingTop: PADDING_TOP,
+            paddingBottom: PADDING_TOP,
+            position: 'relative',
+          }}
+        >
           <PageBreakOverlay pageH={pageH} zoom={zoom} totalHeight={pageH * pages} />
           <div
             ref={previewRef}
@@ -118,17 +218,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         </div>
       </div>
     </div>
-  );
-}
-
-function ZoomBtn({ children, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="p-2 rounded-lg transition hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -161,15 +250,17 @@ function Watermark({ text }) {
       className="pointer-events-none absolute inset-0 grid place-items-center"
       style={{ zIndex: 0 }}
     >
-      <div style={{
-        transform: 'rotate(-30deg)',
-        fontSize: 120,
-        fontWeight: 800,
-        color: '#000',
-        opacity: 0.05,
-        whiteSpace: 'nowrap',
-        letterSpacing: 8,
-      }}>
+      <div
+        style={{
+          transform: 'rotate(-30deg)',
+          fontSize: 120,
+          fontWeight: 800,
+          color: '#000',
+          opacity: 0.05,
+          whiteSpace: 'nowrap',
+          letterSpacing: 8,
+        }}
+      >
         {text}
       </div>
     </div>
