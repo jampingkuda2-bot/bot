@@ -18,11 +18,7 @@ export default function DocBody({ doc }) {
     );
   }
 
-  return (
-    <div style={{ padding: p, position: 'relative' }}>
-      <ContentSections doc={d} plain={isPlain} />
-    </div>
-  );
+  return <ContentSections doc={d} plain={isPlain} />;
 }
 
 function CoverPage({ doc, plain }) {
