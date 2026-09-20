@@ -16,7 +16,7 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState('content');
   const [dark, setDark] = useState(false);
-  const [zoom, setZoom] = useState(0.85);
+  const [zoom, setZoom] = useState(0.4);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState('');
   const [copied, setCopied] = useState(false);
