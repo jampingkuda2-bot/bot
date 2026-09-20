@@ -11,7 +11,9 @@ import ElementToolbar from './ElementToolbar';
 
 const PAGE_NUMBER_RESERVE_MM = 8;
 
-export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom, previewRef }) {
+export default function PreviewPanel({
+  doc, update, pageW, pageH, zoom, setZoom, previewRef, focusLast = 0,
+}) {
   const page = PAGE_SIZES[doc.pageSize];
   const isL = doc.orientation === 'landscape';
   const mmW = isL ? page.mmH : page.mmW;
@@ -45,6 +47,18 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     }
   }, [doc, selected]);
 
+  // Auto-scroll ke halaman terakhir setelah Tambah Bagian
+  const lastFocusHandledRef = useRef(0);
+  useEffect(() => {
+    if (!focusLast || focusLast === lastFocusHandledRef.current) return;
+    const t = setTimeout(() => {
+      lastFocusHandledRef.current = focusLast;
+      setCurrentPage(pages);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [focusLast, pages]);
+
+  // Pagination
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
