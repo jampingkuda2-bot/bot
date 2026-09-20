@@ -15,14 +15,20 @@ export default function ContentTab({
         <Field label="Subjudul">
           <TextInput value={doc.subtitle} onChange={(v) => update({ subtitle: v })} placeholder="Subjudul" />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Penulis">
-            <TextInput value={doc.author} onChange={(v) => update({ author: v })} />
-          </Field>
-          <Field label="Tanggal">
-            <TextInput value={doc.date} onChange={(v) => update({ date: v })} />
-          </Field>
-        </div>
+
+        <Field label="Penulis">
+          <textarea
+            value={doc.author || ''}
+            onChange={(e) => update({ author: e.target.value })}
+            placeholder="Nama penulis (bisa Enter untuk baris baru)"
+            rows={2}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y"
+          />
+        </Field>
+
+        <Field label="Tanggal">
+          <TextInput value={doc.date} onChange={(v) => update({ date: v })} />
+        </Field>
       </Group>
 
       <Group title="Logo & Cover">
