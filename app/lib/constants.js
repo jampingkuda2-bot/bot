@@ -12,10 +12,11 @@ export const FONTS = [
 ];
 
 export const TEMPLATES = [
-  { id: 'modern',  name: 'Modern',  accent: '#2563eb', font: 0, heading: 'line',  lineHeight: 1.65 },
-  { id: 'minimal', name: 'Minimal', accent: '#0f172a', font: 0, heading: 'plain', lineHeight: 1.75 },
-  { id: 'elegant', name: 'Elegant', accent: '#7c3aed', font: 2, heading: 'line',  lineHeight: 1.7  },
-  { id: 'bold',    name: 'Bold',    accent: '#dc2626', font: 0, heading: 'fill',  lineHeight: 1.6  },
+  { id: 'modern',  name: 'Modern',  accent: '#2563eb', font: 0, heading: 'line',  lineHeight: 1.65, plain: false },
+  { id: 'minimal', name: 'Minimal', accent: '#0f172a', font: 0, heading: 'plain', lineHeight: 1.75, plain: false },
+  { id: 'elegant', name: 'Elegant', accent: '#7c3aed', font: 2, heading: 'line',  lineHeight: 1.7,  plain: false },
+  { id: 'bold',    name: 'Bold',    accent: '#dc2626', font: 0, heading: 'fill',  lineHeight: 1.6,  plain: false },
+  { id: 'plain',   name: 'Polos',   accent: '#111827', font: 0, heading: 'plain', lineHeight: 1.7,  plain: true  },
 ];
 
 export const ACCENT_PRESETS = [
@@ -33,6 +34,7 @@ export const buildInitialDoc = () => ({
   logo: null,
   showCover: false,
   template: 'modern',
+  plain: false,
   accent: '#2563eb',
   fontFamily: FONTS[0].value,
   fontSize: 14,
