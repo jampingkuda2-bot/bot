@@ -26,27 +26,60 @@ const META = {
       { value: 'right',  title: 'Kanan',    icon: AlignRight },
     ],
   },
-  logo: {
-    label: 'Logo',
-  },
+  logo: { label: 'Logo' },
 };
 
 export default function ElementToolbar({ selected, doc, update, onClose, nudgeStep = 4 }) {
   if (!selected) return null;
-  const meta = META[selected];
-  if (!meta) return null;
 
-  const xKey = selected + 'OffsetX';
-  const yKey = selected + 'OffsetY';
-  const x = doc[xKey] || 0;
-  const y = doc[yKey] || 0;
+  const isSection = selected.startsWith('sec_');
+  const sectionId = isSection ? selected.slice(4) : null;
+  const sectionIndex = isSection ? doc.sections.findIndex((s) => s.id === sectionId) : -1;
 
-  const nudge = (dx, dy) => update({ [xKey]: x + dx, [yKey]: y + dy });
-  const reset = () => update({ [xKey]: 0, [yKey]: 0 });
+  if (isSection && sectionIndex < 0) return null;
+  if (!isSection && !META[selected]) return null;
+
+  const label = isSection ? `Bagian ${sectionIndex + 1}` : META[selected].label;
+  const alignKey = !isSection ? META[selected].alignKey : null;
+  const alignOptions = !isSection ? META[selected].alignOptions : null;
+
+  const x = isSection
+    ? (doc.sections[sectionIndex].offsetX || 0)
+    : (doc[selected + 'OffsetX'] || 0);
+  const y = isSection
+    ? (doc.sections[sectionIndex].offsetY || 0)
+    : (doc[selected + 'OffsetY'] || 0);
+
+  const nudge = (dx, dy) => {
+    if (isSection) {
+      const arr = doc.sections.slice();
+      arr[sectionIndex] = { ...arr[sectionIndex], offsetX: x + dx, offsetY: y + dy };
+      update({ sections: arr });
+    } else {
+      update({ [selected + 'OffsetX']: x + dx, [selected + 'OffsetY']: y + dy });
+    }
+  };
+
+  const reset = () => {
+    if (isSection) {
+      const arr = doc.sections.slice();
+      arr[sectionIndex] = { ...arr[sectionIndex], offsetX: 0, offsetY: 0 };
+      update({ sections: arr });
+    } else {
+      update({ [selected + 'OffsetX']: 0, [selected + 'OffsetY']: 0 });
+    }
+  };
+
   const remove = () => {
-    if (selected === 'title') update({ title: '', subtitle: '' });
-    else if (selected === 'author') update({ author: '', date: '' });
-    else if (selected === 'logo') update({ logo: null });
+    if (isSection) {
+      update({ sections: doc.sections.filter((_, i) => i !== sectionIndex) });
+    } else if (selected === 'title') {
+      update({ title: '', subtitle: '' });
+    } else if (selected === 'author') {
+      update({ author: '', date: '' });
+    } else if (selected === 'logo') {
+      update({ logo: null });
+    }
     onClose();
   };
 
@@ -56,7 +89,7 @@ export default function ElementToolbar({ selected, doc, update, onClose, nudgeSt
   return (
     <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-2 py-1.5 flex items-center gap-1 overflow-x-auto">
       <span className="text-[11px] font-medium text-neutral-500 px-1 shrink-0 whitespace-nowrap">
-        Edit: <span className="text-neutral-900 dark:text-white">{meta.label}</span>
+        Edit: <span className="text-neutral-900 dark:text-white">{label}</span>
       </span>
       <span className="w-px h-4 bg-neutral-200 dark:bg-neutral-800 mx-1 shrink-0" />
 
@@ -73,16 +106,16 @@ export default function ElementToolbar({ selected, doc, update, onClose, nudgeSt
         <ChevronDown className="w-3.5 h-3.5" />
       </button>
 
-      {meta.alignOptions && (
+      {alignOptions && (
         <>
           <span className="w-px h-4 bg-neutral-200 dark:bg-neutral-800 mx-1 shrink-0" />
-          {meta.alignOptions.map((opt) => {
+          {alignOptions.map((opt) => {
             const Icon = opt.icon;
-            const active = doc[meta.alignKey] === opt.value;
+            const active = doc[alignKey] === opt.value;
             return (
               <button
                 key={opt.value}
-                onClick={() => update({ [meta.alignKey]: opt.value })}
+                onClick={() => update({ [alignKey]: opt.value })}
                 className={`p-1.5 rounded-md transition shrink-0 ${
                   active
                     ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300'
@@ -104,7 +137,7 @@ export default function ElementToolbar({ selected, doc, update, onClose, nudgeSt
       <button
         onClick={remove}
         className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition shrink-0"
-        title="Hapus konten"
+        title={isSection ? 'Hapus bagian ini' : 'Hapus konten'}
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>
