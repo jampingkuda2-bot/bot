@@ -24,10 +24,12 @@ export default function DocBody({ doc, update, zoom = 1 }) {
   return <ContentSections doc={d} plain={isPlain} update={update} zoom={zoom} />;
 }
 
-function useDragTitle(doc, update, zoom) {
+function useDrag(key, doc, update, zoom) {
   const draggingRef = useRef(false);
+  const locked = !!doc.locked;
 
-  const onPointerDown = useCallback((e) => {
+  return useCallback((e) => {
+    if (locked) return;
     if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
@@ -35,8 +37,10 @@ function useDragTitle(doc, update, zoom) {
     draggingRef.current = true;
     const startX = e.clientX;
     const startY = e.clientY;
-    const origX = doc.titleOffsetX || 0;
-    const origY = doc.titleOffsetY || 0;
+    const xKey = key + 'OffsetX';
+    const yKey = key + 'OffsetY';
+    const origX = doc[xKey] || 0;
+    const origY = doc[yKey] || 0;
     const scale = zoom || 1;
     document.body.style.userSelect = 'none';
 
@@ -45,8 +49,8 @@ function useDragTitle(doc, update, zoom) {
       const dx = (ev.clientX - startX) / scale;
       const dy = (ev.clientY - startY) / scale;
       update({
-        titleOffsetX: Math.round(origX + dx),
-        titleOffsetY: Math.round(origY + dy),
+        [xKey]: Math.round(origX + dx),
+        [yKey]: Math.round(origY + dy),
       });
     };
 
@@ -61,14 +65,23 @@ function useDragTitle(doc, update, zoom) {
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
-  }, [doc.titleOffsetX, doc.titleOffsetY, update, zoom]);
+  }, [doc, update, zoom, key, locked]);
+}
 
-  return onPointerDown;
+function draggableStyle(offsets, locked) {
+  return {
+    cursor: locked ? 'default' : 'move',
+    touchAction: locked ? 'auto' : 'none',
+    transform: `translate(${offsets.x || 0}px, ${offsets.y || 0}px)`,
+  };
 }
 
 function CoverPage({ doc, plain, update, zoom }) {
-  const onPointerDown = useDragTitle(doc, update, zoom);
+  const onDragTitle = useDrag('title', doc, update, zoom);
+  const onDragLogo = useDrag('logo', doc, update, zoom);
   const align = doc.titleAlign || 'left';
+  const locked = !!doc.locked;
+  const canDrag = !locked;
 
   return (
     <div
@@ -91,25 +104,36 @@ function CoverPage({ doc, plain, update, zoom }) {
         <img
           src={doc.logo}
           alt=""
-          style={{ maxHeight: 90, maxWidth: 220, objectFit: 'contain', marginBottom: 48 }}
+          onPointerDown={onDragLogo}
+          title={canDrag ? 'Geser logo untuk memindahkan' : 'Terkunci'}
+          style={{
+            maxHeight: 90,
+            maxWidth: 220,
+            objectFit: 'contain',
+            marginBottom: 48,
+            ...draggableStyle(
+              { x: doc.logoOffsetX, y: doc.logoOffsetY },
+              locked
+            ),
+          }}
         />
       )}
       {!plain && (
         <div style={{ height: 6, width: 64, background: doc.accent, borderRadius: 4, marginBottom: 32 }} />
       )}
       <h1
-        onPointerDown={onPointerDown}
-        title="Geser judul untuk memindahkan"
+        onPointerDown={onDragTitle}
+        title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
         style={{
           fontSize: '2.8em',
           fontWeight: 800,
           color: plain ? '#111827' : '#0f172a',
           margin: 0,
           lineHeight: 1.15,
-          cursor: 'move',
-          touchAction: 'none',
-          transform: `translate(${doc.titleOffsetX || 0}px, ${doc.titleOffsetY || 0}px)`,
-          transition: 'none',
+          ...draggableStyle(
+            { x: doc.titleOffsetX, y: doc.titleOffsetY },
+            locked
+          ),
           alignSelf: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
           textAlign: align,
         }}
@@ -138,8 +162,11 @@ function CoverPage({ doc, plain, update, zoom }) {
 }
 
 function ContentSections({ doc, plain, update, zoom }) {
-  const onPointerDown = useDragTitle(doc, update, zoom);
+  const onDragTitle = useDrag('title', doc, update, zoom);
+  const onDragLogo = useDrag('logo', doc, update, zoom);
   const align = doc.titleAlign || 'left';
+  const locked = !!doc.locked;
+  const canDrag = !locked;
 
   return (
     <>
@@ -174,23 +201,34 @@ function ContentSections({ doc, plain, update, zoom }) {
             <img
               src={doc.logo}
               alt=""
-              style={{ height: 56, maxWidth: 120, objectFit: 'contain' }}
+              onPointerDown={onDragLogo}
+              title={canDrag ? 'Geser logo untuk memindahkan' : 'Terkunci'}
+              style={{
+                height: 56,
+                maxWidth: 120,
+                objectFit: 'contain',
+                ...draggableStyle(
+                  { x: doc.logoOffsetX, y: doc.logoOffsetY },
+                  locked
+                ),
+              }}
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1
-              onPointerDown={onPointerDown}
-              title="Geser judul untuk memindahkan"
+              onPointerDown={onDragTitle}
+              title={canDrag ? 'Geser judul untuk memindahkan' : 'Terkunci'}
               style={{
                 fontSize: '2em',
                 fontWeight: 800,
                 color: plain ? '#111827' : doc.accent,
                 margin: 0,
                 lineHeight: 1.15,
-                cursor: 'move',
-                touchAction: 'none',
                 textAlign: align,
-                transform: `translate(${doc.titleOffsetX || 0}px, ${doc.titleOffsetY || 0}px)`,
+                ...draggableStyle(
+                  { x: doc.titleOffsetX, y: doc.titleOffsetY },
+                  locked
+                ),
               }}
             >
               {doc.title || ' '}
