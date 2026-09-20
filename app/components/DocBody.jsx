@@ -13,13 +13,14 @@ const TITLE_ALIGN_OPTS = [
 ];
 
 const AUTHOR_ALIGN_OPTS = [
-  { value: 'split',  title: 'Terpisah (kiri–kanan)', icon: ArrowLeftRight },
+  { value: 'split',  title: 'Terpisah',    icon: ArrowLeftRight },
   { value: 'left',   title: 'Rata kiri',   icon: AlignLeft },
   { value: 'center', title: 'Rata tengah', icon: AlignCenter },
   { value: 'right',  title: 'Rata kanan',  icon: AlignRight },
 ];
 
 const SUBTITLE_COLOR = '#111827';
+const AUTHOR_COLOR = '#111827';
 
 export default function DocBody({ doc, update, zoom = 1 }) {
   const isPlain = !!doc.plain;
@@ -63,7 +64,6 @@ function LogoImg({ doc, update, zoom, size }) {
           objectFit: 'contain',
           display: 'block',
           userSelect: 'none',
-          pointerEvents: 'none',
         }}
       />
     </DragTarget>
@@ -80,7 +80,7 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
       zoom={zoom}
       alignKey="titleAlign"
       alignOptions={TITLE_ALIGN_OPTS}
-      style={{ textAlign: align }}
+      style={{ textAlign: align, width: '100%' }}
       onDelete={() => update({ title: '', subtitle: '' })}
       deleteTitle="Hapus judul & subjudul"
     >
@@ -112,9 +112,10 @@ function TitleBlock({ doc, update, zoom, plain, size, align }) {
   );
 }
 
-function AuthorBlock({ doc, update, zoom, plain }) {
+function AuthorBlock({ doc, update, zoom }) {
   const align = doc.authorAlign || 'split';
-  const color = plain ? '#111827' : '#9ca3af';
+  const size = doc.authorFontSize || 0.82;
+  const fam = doc.authorFontFamily || 'inherit';
 
   return (
     <DragTarget
@@ -124,7 +125,15 @@ function AuthorBlock({ doc, update, zoom, plain }) {
       zoom={zoom}
       alignKey="authorAlign"
       alignOptions={AUTHOR_ALIGN_OPTS}
-      style={{ marginTop: 14, fontSize: '0.82em', color }}
+      style={{
+        marginTop: 14,
+        fontSize: `${size}em`,
+        color: AUTHOR_COLOR,
+        fontFamily: fam,
+        width: '100%',
+        paddingTop: 4,
+        paddingBottom: 4,
+      }}
       onDelete={() => update({ author: '', date: '' })}
       deleteTitle="Hapus penulis & tanggal"
     >
@@ -201,7 +210,7 @@ function CoverPage({ doc, plain, update, zoom }) {
           zoom={zoom}
           alignKey="titleAlign"
           alignOptions={TITLE_ALIGN_OPTS}
-          style={{ textAlign: align }}
+          style={{ textAlign: align, width: '100%' }}
           onDelete={() => update({ title: '', subtitle: '' })}
         >
           <h1
@@ -229,19 +238,8 @@ function CoverPage({ doc, plain, update, zoom }) {
           )}
         </DragTarget>
       </div>
-      <div style={{ marginTop: 64, fontSize: '0.9em', color: '#64748b', width: '100%' }}>
-        <div style={{ textAlign: align }}>
-          <div
-            style={{
-              fontWeight: 600,
-              color: plain ? '#111827' : '#334155',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {doc.author}
-          </div>
-          <div>{doc.date}</div>
-        </div>
+      <div style={{ marginTop: 64, width: '100%' }}>
+        <AuthorBlock doc={doc} update={update} zoom={zoom} />
       </div>
     </div>
   );
@@ -250,7 +248,6 @@ function CoverPage({ doc, plain, update, zoom }) {
 function ContentSections({ doc, plain, update, zoom }) {
   const align = doc.titleAlign || 'left';
   const logoSize = doc.logoSize || 56;
-  const gap = doc.subtitleGap ?? 8;
 
   return (
     <>
@@ -285,40 +282,15 @@ function ContentSections({ doc, plain, update, zoom }) {
             <LogoImg doc={doc} update={update} zoom={zoom} size={logoSize} />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <DragTarget
-              id="title"
+            <TitleBlock
               doc={doc}
               update={update}
               zoom={zoom}
-              alignKey="titleAlign"
-              alignOptions={TITLE_ALIGN_OPTS}
-              style={{ textAlign: align }}
-              onDelete={() => update({ title: '', subtitle: '' })}
-            >
-              <h1
-                style={{
-                  fontSize: `${2 * (doc.titleScale || 1)}em`,
-                  fontWeight: 800,
-                  color: plain ? '#111827' : doc.accent,
-                  margin: 0,
-                  lineHeight: 1.15,
-                }}
-              >
-                {doc.title || ' '}
-              </h1>
-              {doc.subtitle && (
-                <p
-                  style={{
-                    margin: `${gap}px 0 0`,
-                    color: SUBTITLE_COLOR,
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {doc.subtitle}
-                </p>
-              )}
-            </DragTarget>
-            <AuthorBlock doc={doc} update={update} zoom={zoom} plain={plain} />
+              plain={plain}
+              size={2 * (doc.titleScale || 1)}
+              align={align}
+            />
+            <AuthorBlock doc={doc} update={update} zoom={zoom} />
           </div>
         </header>
       )}
