@@ -29,7 +29,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   );
   const usablePageH = useMemo(() => Math.max(100, pageH - reservePx), [pageH, reservePx]);
 
-  // Auto-hilangkan selection kalau elemen hilang / locked
   useEffect(() => {
     if (locked && selected) setSelected(null);
   }, [locked, selected]);
@@ -39,9 +38,13 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     if (selected === 'logo' && !doc.logo) setSelected(null);
     if (selected === 'title' && !(doc.title?.trim() || doc.subtitle?.trim())) setSelected(null);
     if (selected === 'author' && !(doc.author?.trim() || doc.date?.trim())) setSelected(null);
+    if (selected.startsWith('sec_')) {
+      const id = selected.slice(4);
+      const sec = doc.sections.find((s) => s.id === id);
+      if (!sec || !(sec.heading?.trim() || sec.body?.trim())) setSelected(null);
+    }
   }, [doc, selected]);
 
-  // Pagination
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -91,7 +94,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 
   const goTo = (n) => setCurrentPage(Math.max(1, Math.min(pages, n)));
 
-  // Swipe
   useEffect(() => {
     const el = swipeRef.current;
     if (!el) return;
@@ -123,7 +125,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
-      {/* Toolbar utama */}
       <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur px-3 py-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="inline-flex items-center gap-1.5">
@@ -168,34 +169,19 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
             {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
           </button>
           <span className="w-px h-5 bg-neutral-200 dark:bg-neutral-800 mx-0.5" />
-          <button
-            onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
-            title="Zoom out"
-          >
+          <button onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300" title="Zoom out">
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs w-10 text-center tabular-nums">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button
-            onClick={() => setZoom(Math.min(1.6, +(zoom + 0.1).toFixed(2)))}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
-            title="Zoom in"
-          >
+          <span className="text-xs w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(Math.min(1.6, +(zoom + 0.1).toFixed(2)))} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300" title="Zoom in">
             <ZoomIn className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setZoom(0.75)}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
-            title="Fit"
-          >
+          <button onClick={() => setZoom(0.75)} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300" title="Fit">
             <ChevronsUpDown className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Toolbar elemen — di luar halaman */}
       <ElementToolbar
         selected={locked ? null : selected}
         doc={doc}
@@ -209,7 +195,6 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         </div>
       )}
 
-      {/* Viewport */}
       <div ref={swipeRef} className="flex-1 overflow-auto">
         <div className="min-h-full flex items-center justify-center p-4">
           <div
@@ -225,13 +210,10 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
           >
             <div
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: pageW,
+                position: 'absolute', top: 0, left: 0, width: pageW,
                 transform: `scale(${zoom}) translateY(${-offsetY}px)`,
                 transformOrigin: 'top left',
-                transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'transform 320ms cubic-bezier(0.4, 0, 0.2, 1)',
                 willChange: 'transform',
               }}
             >
@@ -276,24 +258,11 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 function Watermark({ text }) {
   if (!text) return null;
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 grid place-items-center"
-      style={{ zIndex: 0 }}
-    >
-      <div
-        style={{
-          transform: 'rotate(-30deg)',
-          fontSize: 120,
-          fontWeight: 800,
-          color: '#000',
-          opacity: 0.05,
-          whiteSpace: 'nowrap',
-          letterSpacing: 8,
-        }}
-      >
-        {text}
-      </div>
+    <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center" style={{ zIndex: 0 }}>
+      <div style={{
+        transform: 'rotate(-30deg)', fontSize: 120, fontWeight: 800,
+        color: '#000', opacity: 0.05, whiteSpace: 'nowrap', letterSpacing: 8,
+      }}>{text}</div>
     </div>
   );
 }
