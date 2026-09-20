@@ -14,6 +14,8 @@ export default function ContentTab({
   const hasTitleOffset = (doc.titleOffsetX || 0) !== 0 || (doc.titleOffsetY || 0) !== 0;
   const hasLogoOffset = (doc.logoOffsetX || 0) !== 0 || (doc.logoOffsetY || 0) !== 0;
   const locked = !!doc.locked;
+  const titleScale = doc.titleScale || 1;
+  const logoSize = doc.logoSize || 56;
 
   return (
     <>
@@ -25,7 +27,6 @@ export default function ContentTab({
               ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300'
               : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
           }`}
-          title={locked ? 'Klik untuk membuka kunci' : 'Klik untuk mengunci judul & logo'}
         >
           {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
           {locked ? 'Terkunci — klik untuk buka' : 'Kunci posisi judul & logo'}
@@ -64,9 +65,9 @@ export default function ContentTab({
                 </button>
               ))}
             </div>
-            {hasTitleOffset && (
+            {(hasTitleOffset || titleScale !== 1) && (
               <button
-                onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0 })}
+                onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0, titleScale: 1 })}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -77,6 +78,18 @@ export default function ContentTab({
           <p className="text-[11px] text-neutral-500 mt-2">
             💡 Geser judul langsung di preview.
           </p>
+        </Field>
+
+        <Field label={`Ukuran Judul — ${Math.round(titleScale * 100)}%`}>
+          <input
+            type="range"
+            min={0.5}
+            max={2.5}
+            step={0.05}
+            value={titleScale}
+            onChange={(e) => update({ titleScale: Number(e.target.value) })}
+            className="w-full"
+          />
         </Field>
 
         <Field label="Subjudul">
@@ -124,20 +137,34 @@ export default function ContentTab({
           </div>
         </div>
 
-        {doc.logo && hasLogoOffset && (
-          <button
-            onClick={() => update({ logoOffsetX: 0, logoOffsetY: 0 })}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-          >
-            <RotateCcw className="w-3 h-3" />
-            Reset posisi logo
-          </button>
-        )}
-
         {doc.logo && (
-          <p className="text-[11px] text-neutral-500">
-            💡 Geser logo langsung di preview.
-          </p>
+          <>
+            <Field label={`Ukuran Logo — ${logoSize}px`}>
+              <input
+                type="range"
+                min={20}
+                max={220}
+                step={4}
+                value={logoSize}
+                onChange={(e) => update({ logoSize: Number(e.target.value) })}
+                className="w-full"
+              />
+            </Field>
+
+            {(hasLogoOffset || logoSize !== 56) && (
+              <button
+                onClick={() => update({ logoOffsetX: 0, logoOffsetY: 0, logoSize: 56 })}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset logo
+              </button>
+            )}
+
+            <p className="text-[11px] text-neutral-500">
+              💡 Geser logo langsung di preview.
+            </p>
+          </>
         )}
 
         <Toggle
