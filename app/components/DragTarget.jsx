@@ -1,7 +1,9 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
-import { RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Trash2,
+} from 'lucide-react';
 
 export default function DragTarget({
   id,
@@ -13,6 +15,8 @@ export default function DragTarget({
   className = '',
   alignKey,
   alignOptions,
+  onDelete,
+  deleteTitle,
   nudgeStep = 4,
 }) {
   const [hovered, setHovered] = useState(false);
@@ -63,15 +67,21 @@ export default function DragTarget({
     window.addEventListener('pointercancel', up);
   }, [doc, update, zoom, xKey, yKey, locked]);
 
-  const nudge = (dx) => update({ [xKey]: offsetX + dx });
+  const nudge = (dx, dy) => update({
+    [xKey]: offsetX + dx,
+    [yKey]: offsetY + dy,
+  });
 
   const resetPos = () => update({ [xKey]: 0, [yKey]: 0 });
 
   const currentAlign = alignKey ? doc[alignKey] : null;
   const showToolbar = hovered && !locked;
 
+  const btn = 'p-1.5 hover:bg-white/15 rounded transition';
+
   return (
     <div
+      data-draggable={id}
       onPointerDown={onPointerDown}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -80,6 +90,9 @@ export default function DragTarget({
         cursor: locked ? 'default' : 'move',
         touchAction: locked ? 'auto' : 'none',
         transform: `translate(${offsetX}px, ${offsetY}px)`,
+        outline: hovered && !locked ? '1px dashed rgba(37,99,235,0.5)' : 'none',
+        outlineOffset: 4,
+        borderRadius: 4,
         ...style,
       }}
     >
@@ -89,27 +102,26 @@ export default function DragTarget({
           onPointerDown={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
-            top: -40,
+            top: `${-40 / zoom}px`,
             left: '50%',
-            transform: `translateX(-50%) scale(${1 / (zoom || 1)})`,
+            transform: `translateX(-50%) scale(${1 / zoom})`,
             transformOrigin: 'bottom center',
             zIndex: 50,
+            whiteSpace: 'nowrap',
           }}
-          className="flex items-center gap-0.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg px-1 py-0.5 shadow-xl text-[10px] whitespace-nowrap"
+          className="flex items-center gap-0.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg px-1 py-0.5 shadow-2xl"
         >
-          <button
-            onClick={() => nudge(-nudgeStep)}
-            className="p-1.5 hover:bg-white/15 rounded transition"
-            title={`Geser kiri ${nudgeStep}px`}
-          >
+          <button onClick={() => nudge(-nudgeStep, 0)} className={btn} title="Geser kiri">
             <ChevronLeft className="w-3 h-3" />
           </button>
-          <button
-            onClick={() => nudge(nudgeStep)}
-            className="p-1.5 hover:bg-white/15 rounded transition"
-            title={`Geser kanan ${nudgeStep}px`}
-          >
+          <button onClick={() => nudge(nudgeStep, 0)} className={btn} title="Geser kanan">
             <ChevronRight className="w-3 h-3" />
+          </button>
+          <button onClick={() => nudge(0, -nudgeStep)} className={btn} title="Geser atas">
+            <ChevronUp className="w-3 h-3" />
+          </button>
+          <button onClick={() => nudge(0, nudgeStep)} className={btn} title="Geser bawah">
+            <ChevronDown className="w-3 h-3" />
           </button>
 
           {alignKey && alignOptions?.length > 0 && (
@@ -122,7 +134,9 @@ export default function DragTarget({
                   <button
                     key={opt.value}
                     onClick={() => update({ [alignKey]: opt.value })}
-                    className={`p-1.5 rounded transition ${active ? 'bg-white/25' : 'hover:bg-white/15'}`}
+                    className={`p-1.5 rounded transition ${
+                      active ? 'bg-white/25' : 'hover:bg-white/15'
+                    }`}
                     title={opt.title}
                   >
                     <Icon className="w-3 h-3" />
@@ -133,13 +147,19 @@ export default function DragTarget({
           )}
 
           <span className="w-px h-3 bg-white/25 mx-0.5" />
-          <button
-            onClick={resetPos}
-            className="p-1.5 hover:bg-white/15 rounded transition"
-            title="Reset posisi"
-          >
+          <button onClick={resetPos} className={btn} title="Reset posisi">
             <RotateCcw className="w-3 h-3" />
           </button>
+
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="p-1.5 hover:bg-red-500/40 rounded transition"
+              title={deleteTitle || 'Hapus konten'}
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
         </div>
       )}
       {children}
