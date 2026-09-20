@@ -293,7 +293,6 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
             {s.type === 'table' ? (
               <TableBlock
                 tableData={s.tableData}
-                plain={plain}
                 align={s.align || 'left'}
               />
             ) : (
@@ -323,6 +322,8 @@ function TableBlock({ tableData, align }) {
   const headerRow = tableData?.headerRow !== false;
   if (rows.length === 0 || rows[0].length === 0) return null;
 
+  const BORDER = '1px solid #111827';
+
   return (
     <div style={{
       width: '100%',
@@ -334,6 +335,7 @@ function TableBlock({ tableData, align }) {
         width: '100%',
         fontSize: '0.92em',
         pageBreakInside: 'avoid',
+        color: '#111827',
       }}>
         <tbody>
           {rows.map((row, ri) => {
@@ -344,8 +346,7 @@ function TableBlock({ tableData, align }) {
                   <td
                     key={ci}
                     style={{
-                      border: '1px solid #d1d5db',
-                      borderBottom: isHeader ? '2px solid #111827' : '1px solid #d1d5db',
+                      border: BORDER,
                       padding: '6px 10px',
                       textAlign: 'left',
                       verticalAlign: 'top',
