@@ -23,6 +23,7 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState('');
   const [copied, setCopied] = useState(false);
+  const [focusLast, setFocusLast] = useState(0);
   const previewRef = useRef(null);
   const importRef = useRef(null);
 
@@ -55,18 +56,23 @@ export default function Home() {
     return { ...d, sections: s };
   });
 
-  const addSection = () => setDoc((d) => ({
-    ...d,
-    sections: [...d.sections, {
-      id: uid(),
-      heading: 'Bagian Baru',
-      body: '',
-      align: 'left',
-      breakBefore: false,
-      offsetX: 0,
-      offsetY: 0,
-    }],
-  }));
+  const addSection = () => {
+    setDoc((d) => ({
+      ...d,
+      sections: [...d.sections, {
+        id: uid(),
+        heading: 'Bagian Baru',
+        body: '',
+        align: 'left',
+        breakBefore: false,
+        offsetX: 0,
+        offsetY: 0,
+        fontFamily: '',
+        fontSize: 0,
+      }],
+    }));
+    setFocusLast((v) => v + 1);
+  };
 
   const removeSection = (i) => setDoc((d) => ({
     ...d,
@@ -210,6 +216,7 @@ export default function Home() {
           zoom={zoom}
           setZoom={setZoom}
           previewRef={previewRef}
+          focusLast={focusLast}
         />
       </div>
     </div>
