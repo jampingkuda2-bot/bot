@@ -283,7 +283,7 @@ function TableEditor({ tableData, onChange }) {
                   <span className={`w-5 text-[10px] text-center shrink-0 ${
                     isHeader ? 'text-neutral-400' : 'text-neutral-500'
                   }`}>
-                    {isHeader ? '#' : dataIndex + 1}
+                    {isHeader ? 'No.' : dataIndex + 1}
                   </span>
                 )}
                 {row.map((cell, ci) => (
