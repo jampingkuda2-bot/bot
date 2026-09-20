@@ -6,7 +6,7 @@ import SectionCard from './SectionCard';
 import { FONTS } from '../lib/constants';
 
 const BIG_TEXTAREA =
-  'w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y min-h-[100px]';
+  'w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 resize-y min-h-[70px]';
 
 export default function ContentTab({
   doc, update, updateSection, addSection,
@@ -22,11 +22,9 @@ export default function ContentTab({
 
   return (
     <>
-      <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 p-3 mb-4">
-        <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-          💡 <b>Tips:</b> <b>Tap</b> judul, logo, atau penulis di preview → bar editor
-          muncul di bawah toolbar untuk geser, atur perataan, reset, atau hapus.
-        </p>
+      <div className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/30 px-2.5 py-2 text-[11px] text-blue-700 dark:text-blue-300 leading-snug">
+        <b>Tips:</b> Tap judul, logo, atau penulis di preview → bar editor muncul
+        di bawah toolbar untuk geser, atur perataan, reset, atau hapus.
       </div>
 
       <Group title="Informasi Dokumen">
@@ -36,10 +34,7 @@ export default function ContentTab({
 
         <Field label={`Ukuran Judul — ${Math.round(titleScale * 100)}%`}>
           <input
-            type="range"
-            min={0.5}
-            max={2.5}
-            step={0.05}
+            type="range" min={0.5} max={2.5} step={0.05}
             value={titleScale}
             onChange={(e) => update({ titleScale: Number(e.target.value) })}
             className="w-full"
@@ -49,7 +44,7 @@ export default function ContentTab({
         {hasTitleOffset && (
           <button
             onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0 })}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 text-[10px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
           >
             <RotateCcw className="w-3 h-3" />
             Reset posisi judul
@@ -60,8 +55,8 @@ export default function ContentTab({
           <textarea
             value={doc.subtitle || ''}
             onChange={(e) => update({ subtitle: e.target.value })}
-            placeholder="Subjudul atau deskripsi singkat (bisa Enter untuk baris baru)"
-            rows={4}
+            placeholder="Subjudul (bisa Enter)"
+            rows={2}
             className={BIG_TEXTAREA}
           />
         </Field>
@@ -69,10 +64,7 @@ export default function ContentTab({
         {doc.subtitle && (
           <Field label={`Jarak Judul–Subjudul — ${subtitleGap}px`}>
             <input
-              type="range"
-              min={0}
-              max={80}
-              step={2}
+              type="range" min={0} max={80} step={2}
               value={subtitleGap}
               onChange={(e) => update({ subtitleGap: Number(e.target.value) })}
               className="w-full"
@@ -84,8 +76,8 @@ export default function ContentTab({
           <textarea
             value={doc.author || ''}
             onChange={(e) => update({ author: e.target.value })}
-            placeholder="Nama penulis (bisa Enter untuk baris baru)"
-            rows={4}
+            placeholder="Nama penulis (bisa Enter)"
+            rows={2}
             className={BIG_TEXTAREA}
           />
         </Field>
@@ -94,7 +86,7 @@ export default function ContentTab({
           <select
             value={doc.authorFontFamily || ''}
             onChange={(e) => update({ authorFontFamily: e.target.value })}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+            className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
           >
             <option value="">Sama dengan dokumen</option>
             {FONTS.map((f) => (
@@ -105,10 +97,7 @@ export default function ContentTab({
 
         <Field label={`Ukuran Penulis — ${Math.round(authorFontSize * 100)}%`}>
           <input
-            type="range"
-            min={0.5}
-            max={1.6}
-            step={0.02}
+            type="range" min={0.5} max={1.6} step={0.02}
             value={authorFontSize}
             onChange={(e) => update({ authorFontSize: Number(e.target.value) })}
             className="w-full"
@@ -118,7 +107,7 @@ export default function ContentTab({
         {hasAuthorOffset && (
           <button
             onClick={() => update({ authorOffsetX: 0, authorOffsetY: 0 })}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 text-[10px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
           >
             <RotateCcw className="w-3 h-3" />
             Reset posisi penulis
@@ -131,7 +120,7 @@ export default function ContentTab({
       </Group>
 
       <Group title={`Bagian (${doc.sections.length})`}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {doc.sections.map((s, i) => (
             <SectionCard
               key={i}
@@ -146,35 +135,43 @@ export default function ContentTab({
               canMoveDown={i < doc.sections.length - 1}
             />
           ))}
-          <button
-            onClick={addSection}
-            className="w-full py-2.5 text-sm rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-blue-500 hover:text-blue-600 text-neutral-500 transition"
-          >
-            <Plus className="w-4 h-4 inline -mt-0.5 mr-1" />
-            Tambah Bagian
-          </button>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => addSection('text')}
+              className="py-2 text-[12px] rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-blue-500 hover:text-blue-600 text-neutral-500 transition flex items-center justify-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Teks
+            </button>
+            <button
+              onClick={() => addSection('table')}
+              className="py-2 text-[12px] rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-emerald-500 hover:text-emerald-600 text-neutral-500 transition flex items-center justify-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Tabel
+            </button>
+          </div>
         </div>
       </Group>
 
       <Group title="Logo & Cover">
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 grid place-items-center overflow-hidden bg-neutral-50 dark:bg-neutral-800/50">
+        <div className="flex items-center gap-2.5">
+          <div className="w-11 h-11 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 grid place-items-center overflow-hidden bg-neutral-50 dark:bg-neutral-800/50 shrink-0">
             {doc.logo ? (
               <img src={doc.logo} alt="logo" className="w-full h-full object-contain" />
             ) : (
-              <ImageIcon className="w-5 h-5 text-neutral-400" />
+              <ImageIcon className="w-4 h-4 text-neutral-400" />
             )}
           </div>
-          <div className="flex-1 space-y-1.5">
-            <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800">
-              <Upload className="w-3.5 h-3.5" />
+          <div className="flex-1 min-w-0 space-y-1">
+            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 text-[11px] cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800">
+              <Upload className="w-3 h-3" />
               Upload logo
               <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
             </label>
             {doc.logo && (
               <button
                 onClick={() => update({ logo: null })}
-                className="block text-[11px] text-red-600 hover:underline"
+                className="block text-[10px] text-red-600 hover:underline"
               >
                 Hapus logo
               </button>
@@ -186,10 +183,7 @@ export default function ContentTab({
           <>
             <Field label={`Ukuran Logo — ${logoSize}px`}>
               <input
-                type="range"
-                min={20}
-                max={220}
-                step={4}
+                type="range" min={20} max={220} step={4}
                 value={logoSize}
                 onChange={(e) => update({ logoSize: Number(e.target.value) })}
                 className="w-full"
@@ -199,7 +193,7 @@ export default function ContentTab({
             {(hasLogoOffset || logoSize !== 56) && (
               <button
                 onClick={() => update({ logoOffsetX: 0, logoOffsetY: 0, logoSize: 56 })}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 text-[10px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
                 <RotateCcw className="w-3 h-3" />
                 Reset logo
