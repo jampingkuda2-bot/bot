@@ -55,6 +55,8 @@ export const buildInitialDoc = () => ({
   authorAlign: 'split',
   authorOffsetX: 0,
   authorOffsetY: 0,
+  authorFontFamily: '',
+  authorFontSize: 0.82,
   logoOffsetX: 0,
   logoOffsetY: 0,
   logoSize: 56,
