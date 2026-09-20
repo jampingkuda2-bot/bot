@@ -1,4 +1,4 @@
-import { Plus, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Upload, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, RotateCcw } from 'lucide-react';
 import { Group, Field, TextInput, Toggle } from './ui';
 import SectionCard from './SectionCard';
 
@@ -6,12 +6,54 @@ export default function ContentTab({
   doc, update, updateSection, addSection,
   removeSection, moveSection, duplicateSection, onLogoChange,
 }) {
+  const titleAlign = doc.titleAlign || 'left';
+  const hasOffset = (doc.titleOffsetX || 0) !== 0 || (doc.titleOffsetY || 0) !== 0;
+
   return (
     <>
       <Group title="Informasi Dokumen">
         <Field label="Judul">
           <TextInput value={doc.title} onChange={(v) => update({ title: v })} placeholder="Judul dokumen" />
         </Field>
+
+        <Field label="Posisi Judul">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+              {[
+                { v: 'left',   Icon: AlignLeft,   title: 'Kiri' },
+                { v: 'center', Icon: AlignCenter, title: 'Tengah' },
+                { v: 'right',  Icon: AlignRight,  title: 'Kanan' },
+              ].map(({ v, Icon, title }) => (
+                <button
+                  key={v}
+                  onClick={() => update({ titleAlign: v })}
+                  title={title}
+                  className={`p-1.5 rounded-md transition ${
+                    titleAlign === v
+                      ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white'
+                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </button>
+              ))}
+            </div>
+            {hasOffset && (
+              <button
+                onClick={() => update({ titleOffsetX: 0, titleOffsetY: 0 })}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                title="Kembalikan posisi judul ke default"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-neutral-500 mt-2">
+            💡 Geser judul langsung di preview untuk memindahkan posisinya.
+          </p>
+        </Field>
+
         <Field label="Subjudul">
           <TextInput value={doc.subtitle} onChange={(v) => update({ subtitle: v })} placeholder="Subjudul" />
         </Field>
