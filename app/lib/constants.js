@@ -52,6 +52,7 @@ export const buildInitialDoc = () => ({
   titleOffsetY: 0,
   titleScale: 1,
   subtitleGap: 8,
+  authorAlign: 'split',
   logoOffsetX: 0,
   logoOffsetY: 0,
   logoSize: 56,
