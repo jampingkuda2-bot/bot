@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Eye, ZoomIn, ZoomOut, ChevronsUpDown } from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
@@ -11,16 +11,59 @@ export default function PreviewPanel({ doc, pageW, pageH, zoom, setZoom, preview
   const mmW = isL ? page.mmH : page.mmW;
   const mmH = isL ? page.mmW : page.mmH;
   const [pages, setPages] = useState(1);
+  const innerRef = useRef(null);
 
   useEffect(() => {
-    if (!previewRef.current) return;
     const el = previewRef.current;
-    const update = () => setPages(Math.max(1, Math.ceil(el.scrollHeight / pageH)));
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [previewRef, pageH, doc]);
+    if (!el) return;
+
+    const applyPagination = () => {
+      // 1. Buang spacer lama
+      el.querySelectorAll('[data-spacer]').forEach((s) => s.remove());
+
+      // 2. Ukur tiap blok
+      const elTop = el.getBoundingClientRect().top;
+      const blocks = Array.from(el.querySelectorAll('[data-block]'));
+
+      blocks.forEach((block) => {
+        const rect = block.getBoundingClientRect();
+        const top = rect.top - elTop;
+        const height = rect.height;
+
+        const pageStart = Math.floor(top / pageH) * pageH;
+        const pageEnd = pageStart + pageH;
+
+        const manualBreak = block.dataset.pageBreak === 'true';
+        const crosses = top + height > pageEnd + 2;
+        const fitsOnOnePage = height + 32 <= pageH;
+
+        let pushDown = 0;
+
+        if (manualBreak && top > pageStart + 2) {
+          pushDown = pageEnd - top;
+        } else if (crosses && fitsOnOnePage) {
+          pushDown = pageEnd - top;
+        }
+
+        if (pushDown > 4 && pushDown < pageH) {
+          const spacer = document.createElement('div');
+          spacer.setAttribute('data-spacer', '1');
+          spacer.style.height = pushDown + 'px';
+          spacer.style.background = 'transparent';
+          spacer.style.pointerEvents = 'none';
+          block.parentNode.insertBefore(spacer, block);
+        }
+      });
+
+      // 3. Update jumlah halaman
+      requestAnimationFrame(() => {
+        setPages(Math.max(1, Math.ceil(el.scrollHeight / pageH)));
+      });
+    };
+
+    const t = setTimeout(applyPagination, 60);
+    return () => clearTimeout(t);
+  }, [doc, pageH, previewRef]);
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
