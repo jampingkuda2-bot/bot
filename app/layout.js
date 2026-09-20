@@ -1,8 +1,17 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'PDF Studio — Buat Dokumen PDF',
-  description: 'Editor dokumen dengan export PDF multi-halaman.',
+  title: 'PDF Studio',
+  description: 'Editor dokumen dengan export PDF.',
+};
+
+export const viewport = {
+  width: 1280,
+  initialScale: 0.3,
+  minimumScale: 0.1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }) {
