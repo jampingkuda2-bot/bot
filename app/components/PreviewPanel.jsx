@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Eye, ZoomIn, ZoomOut, ChevronsUpDown, ChevronLeft, ChevronRight,
+  Lock, Unlock,
 } from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DocBody from './DocBody';
+import ElementToolbar from './ElementToolbar';
 
 const PAGE_NUMBER_RESERVE_MM = 8;
 
@@ -16,18 +18,30 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
   const mmH = isL ? page.mmW : page.mmH;
   const [pages, setPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [direction, setDirection] = useState(0);
-  const margin = doc.showCover ? 0 : doc.margin;
+  const [selected, setSelected] = useState(null);
   const swipeRef = useRef(null);
+  const margin = doc.showCover ? 0 : doc.margin;
+  const locked = !!doc.locked;
 
-  // Sama persis dengan logika export PDF
   const reservePx = useMemo(
     () => (doc.showPageNumbers ? (pageH * PAGE_NUMBER_RESERVE_MM) / mmH : 0),
     [pageH, mmH, doc.showPageNumbers]
   );
   const usablePageH = useMemo(() => Math.max(100, pageH - reservePx), [pageH, reservePx]);
 
-  // Pagination — posisikan blok ke halaman yang benar
+  // Auto-hilangkan selection kalau elemen hilang / locked
+  useEffect(() => {
+    if (locked && selected) setSelected(null);
+  }, [locked, selected]);
+
+  useEffect(() => {
+    if (!selected) return;
+    if (selected === 'logo' && !doc.logo) setSelected(null);
+    if (selected === 'title' && !(doc.title?.trim() || doc.subtitle?.trim())) setSelected(null);
+    if (selected === 'author' && !(doc.author?.trim() || doc.date?.trim())) setSelected(null);
+  }, [doc, selected]);
+
+  // Pagination
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -75,13 +89,9 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
     return () => clearTimeout(t);
   }, [doc, usablePageH, reservePx, previewRef, zoom]);
 
-  const goTo = (n) => {
-    const target = Math.max(1, Math.min(pages, n));
-    setDirection(target > currentPage ? 1 : target < currentPage ? -1 : 0);
-    setCurrentPage(target);
-  };
+  const goTo = (n) => setCurrentPage(Math.max(1, Math.min(pages, n)));
 
-  // Swipe gesture (mobile) — khusus pindah halaman
+  // Swipe
   useEffect(() => {
     const el = swipeRef.current;
     if (!el) return;
@@ -113,7 +123,7 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 
   return (
     <div className="flex flex-col min-h-0 bg-neutral-100 dark:bg-neutral-950">
-      {/* Toolbar */}
+      {/* Toolbar utama */}
       <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur px-3 py-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="inline-flex items-center gap-1.5">
@@ -147,6 +157,18 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
 
         <div className="flex items-center gap-1">
           <button
+            onClick={() => update({ locked: !locked })}
+            className={`p-2 rounded-lg transition ${
+              locked
+                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
+            }`}
+            title={locked ? 'Terkunci — klik untuk buka' : 'Kunci judul, logo & penulis'}
+          >
+            {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </button>
+          <span className="w-px h-5 bg-neutral-200 dark:bg-neutral-800 mx-0.5" />
+          <button
             onClick={() => setZoom(Math.max(0.4, +(zoom - 0.1).toFixed(2)))}
             className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
             title="Zoom out"
@@ -173,7 +195,21 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
         </div>
       </div>
 
-      {/* Page viewport — satu halaman */}
+      {/* Toolbar elemen — di luar halaman */}
+      <ElementToolbar
+        selected={locked ? null : selected}
+        doc={doc}
+        update={update}
+        onClose={() => setSelected(null)}
+      />
+
+      {locked && (
+        <div className="border-b border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+          🔒 Posisi judul, logo & penulis terkunci. Klik ikon kunci di toolbar untuk membuka.
+        </div>
+      )}
+
+      {/* Viewport */}
       <div ref={swipeRef} className="flex-1 overflow-auto">
         <div className="min-h-full flex items-center justify-center p-4">
           <div
@@ -215,11 +251,16 @@ export default function PreviewPanel({ doc, update, pageW, pageH, zoom, setZoom,
                 }}
               >
                 <Watermark text={doc.watermark} />
-                <DocBody doc={doc} update={update} zoom={zoom} />
+                <DocBody
+                  doc={doc}
+                  update={update}
+                  zoom={zoom}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
               </div>
             </div>
 
-            {/* Nomor halaman di bawah */}
             {doc.showPageNumbers && (
               <div className="absolute left-1/2 -translate-x-1/2 bottom-1.5 text-[9px] text-neutral-400 select-none pointer-events-none">
                 {currentPage} / {pages}
