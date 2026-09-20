@@ -5,7 +5,7 @@ import { PAGE_SIZES } from '../lib/constants';
 
 export default function DocBody({ doc, update, zoom = 1 }) {
   const isPlain = !!doc.plain;
-  const d = isPlai
+  const d = isPlain
     ? { ...doc, accent: '#111827', headingStyle: 'plain' }
     : doc;
   const p = d.margin;
