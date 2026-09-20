@@ -293,7 +293,6 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
             {s.type === 'table' ? (
               <TableBlock
                 tableData={s.tableData}
-                accent={doc.accent}
                 plain={plain}
                 align={s.align || 'left'}
               />
@@ -319,7 +318,7 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
   );
 }
 
-function TableBlock({ tableData, accent, plain, align }) {
+function TableBlock({ tableData, align }) {
   const rows = tableData?.rows || [];
   const headerRow = tableData?.headerRow !== false;
   if (rows.length === 0 || rows[0].length === 0) return null;
@@ -346,14 +345,13 @@ function TableBlock({ tableData, accent, plain, align }) {
                     key={ci}
                     style={{
                       border: '1px solid #d1d5db',
+                      borderBottom: isHeader ? '2px solid #111827' : '1px solid #d1d5db',
                       padding: '6px 10px',
                       textAlign: 'left',
                       verticalAlign: 'top',
-                      color: isHeader ? '#ffffff' : '#1f2937',
-                      background: isHeader
-                        ? (plain ? '#111827' : accent)
-                        : '#ffffff',
-                      fontWeight: isHeader ? 600 : 400,
+                      color: '#111827',
+                      background: 'transparent',
+                      fontWeight: isHeader ? 700 : 400,
                       whiteSpace: 'pre-wrap',
                     }}
                   >
@@ -399,4 +397,4 @@ function SectionHeading({ text, style: s, color, plain }) {
   }
 
   return <h2 style={{ fontSize: '1.25em', fontWeight: 700, color, margin: '0 0 10px' }}>{text}</h2>;
-            }
+}
