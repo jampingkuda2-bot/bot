@@ -14,6 +14,7 @@ import StyleTab from './components/StyleTab';
 import PageTab from './components/PageTab';
 import DataTab from './components/DataTab';
 import PreviewPanel from './components/PreviewPanel';
+import ImportPdfModal from './components/ImportPdfModal';
 
 export default function Home() {
   const [doc, setDoc] = useState(buildInitialDoc);
@@ -25,6 +26,7 @@ export default function Home() {
   const [progress, setProgress] = useState('');
   const [copied, setCopied] = useState(false);
   const [focusLast, setFocusLast] = useState(0);
+  const [importOpen, setImportOpen] = useState(false);
   const previewRef = useRef(null);
   const importRef = useRef(null);
 
@@ -112,6 +114,21 @@ export default function Home() {
     e.target.value = '';
   };
 
+  const handleImportPdf = (newSections, mode) => {
+    setDoc((d) => {
+      if (mode === 'replace') {
+        return {
+          ...d,
+          sections: newSections,
+          title: newSections[0]?.heading || d.title,
+        };
+      }
+      return { ...d, sections: [...d.sections, ...newSections] };
+    });
+    setFocusLast((v) => v + 1);
+    setTab('content');
+  };
+
   const handleExport = async () => {
     if (!previewRef.current) return;
     setExporting(true);
@@ -152,6 +169,10 @@ export default function Home() {
     );
   }
 
+  const hasExistingContent = doc.sections.some(
+    (s) => (s.heading && s.heading.trim()) || (s.body && s.body.trim())
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar
@@ -164,6 +185,7 @@ export default function Home() {
         onReset={resetDoc}
         onExportJson={exportJson}
         onImportJson={() => importRef.current?.click()}
+        onImportPdf={() => setImportOpen(true)}
       />
       <input
         ref={importRef}
@@ -172,6 +194,14 @@ export default function Home() {
         className="hidden"
         onChange={importJson}
       />
+
+      <ImportPdfModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImportPdf}
+        hasExistingContent={hasExistingContent}
+      />
+
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_1fr] min-h-0">
         <aside className="border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col min-h-0 lg:max-h-[calc(100vh-53px)]">
           <Tabs tab={tab} setTab={setTab} />
