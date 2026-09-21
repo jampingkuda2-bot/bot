@@ -20,14 +20,11 @@ export default function TopBar({
           </div>
         </div>
         <div className="flex items-center gap-0.5">
-          <IconBtn title="Import PDF" onClick={onImportPdf}>
+          <IconBtn title="Import Dokumen" onClick={onImportPdf}>
             <FileUp className="w-4 h-4" />
           </IconBtn>
           <IconBtn title="Import JSON" onClick={onImportJson}>
             <Upload className="w-4 h-4" />
-          </IconBtn>
-          <IconBtn title="Export JSON" onClick={onExportJson}>
-            <FileJson className="w-4 h-4" />
           </IconBtn>
           <IconBtn title="Reset" onClick={onReset}>
             <RotateCcw className="w-4 h-4" />
@@ -37,21 +34,11 @@ export default function TopBar({
           </IconBtn>
           <button
             onClick={onExport}
-            disabled={exporting}
-            className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[12px] font-medium hover:opacity-90 disabled:opacity-60"
+            className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[12px] font-medium hover:opacity-90"
           >
-            {exporting ? (
-              <>
-                <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                <span className="hidden sm:inline">{progress || 'Proses…'}</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Export</span>
-                <span className="sm:hidden">PDF</span>
-              </>
-            )}
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden">Ekspor</span>
           </button>
         </div>
       </div>
