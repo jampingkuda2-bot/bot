@@ -11,6 +11,17 @@ import ElementToolbar from './ElementToolbar';
 
 const PAGE_NUMBER_RESERVE_MM = 8;
 
+/* Cek section kosong — tabel dihitung dari tableData */
+function sectionIsEmpty(sec) {
+  if (!sec) return true;
+  if (sec.heading && sec.heading.trim()) return false;
+  if (sec.type === 'table') {
+    const rows = sec.tableData?.rows || [];
+    return !rows.some((row) => row.some((cell) => cell && cell.trim()));
+  }
+  return !(sec.body && sec.body.trim());
+}
+
 export default function PreviewPanel({
   doc, update, pageW, pageH, zoom, setZoom, previewRef, focusLast = 0,
 }) {
@@ -31,10 +42,12 @@ export default function PreviewPanel({
   );
   const usablePageH = useMemo(() => Math.max(100, pageH - reservePx), [pageH, reservePx]);
 
+  // Clear selection kalau locked
   useEffect(() => {
     if (locked && selected) setSelected(null);
   }, [locked, selected]);
 
+  // Clear selection kalau elemen yang dipilih sudah hilang
   useEffect(() => {
     if (!selected) return;
     if (selected === 'logo' && !doc.logo) setSelected(null);
@@ -43,7 +56,7 @@ export default function PreviewPanel({
     if (selected.startsWith('sec_')) {
       const id = selected.slice(4);
       const sec = doc.sections.find((s) => s.id === id);
-      if (!sec || !(sec.heading?.trim() || sec.body?.trim())) setSelected(null);
+      if (sectionIsEmpty(sec)) setSelected(null);
     }
   }, [doc, selected]);
 
@@ -108,13 +121,14 @@ export default function PreviewPanel({
 
   const goTo = (n) => setCurrentPage(Math.max(1, Math.min(pages, n)));
 
+  // Swipe gesture untuk pindah halaman
   useEffect(() => {
     const el = swipeRef.current;
     if (!el) return;
     let x0 = 0, y0 = 0, active = false;
     const down = (e) => {
       if (e.pointerType !== 'touch') return;
-      if (e.target.closest && (e.target.closest('[data-draggable]') || e.target.closest('[data-toolbar]'))) return;
+      if (e.target.closest && (e.target.closest('[data-drag-handle]') || e.target.closest('[data-draggable]') || e.target.closest('[data-toolbar]'))) return;
       active = true; x0 = e.clientX; y0 = e.clientY;
     };
     const up = (e) => {
@@ -178,7 +192,7 @@ export default function PreviewPanel({
                 ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
             }`}
-            title={locked ? 'Terkunci — klik untuk buka' : 'Kunci judul, logo & penulis'}
+            title={locked ? 'Terkunci' : 'Kunci judul, logo & penulis'}
           >
             {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
           </button>
@@ -205,7 +219,7 @@ export default function PreviewPanel({
 
       {locked && (
         <div className="border-b border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
-          🔒 Posisi judul, logo & penulis terkunci. Klik ikon kunci di toolbar untuk membuka.
+          🔒 Posisi judul, logo & penulis terkunci.
         </div>
       )}
 
