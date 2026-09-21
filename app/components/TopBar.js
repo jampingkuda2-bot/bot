@@ -1,9 +1,9 @@
-import { FileText, Download, Upload, FileJson, RotateCcw, Moon, Sun } from 'lucide-react';
+import { FileText, Download, Upload, FileJson, RotateCcw, Moon, Sun, FileUp } from 'lucide-react';
 import { IconBtn } from './ui';
 
 export default function TopBar({
   doc, dark, exporting, progress,
-  onToggleTheme, onExport, onReset, onExportJson, onImportJson,
+  onToggleTheme, onExport, onReset, onExportJson, onImportJson, onImportPdf,
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900/90 backdrop-blur">
@@ -20,6 +20,9 @@ export default function TopBar({
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          <IconBtn title="Import PDF" onClick={onImportPdf}>
+            <FileUp className="w-4 h-4" />
+          </IconBtn>
           <IconBtn title="Import JSON" onClick={onImportJson}>
             <Upload className="w-4 h-4" />
           </IconBtn>
