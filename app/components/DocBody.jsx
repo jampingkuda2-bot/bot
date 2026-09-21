@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
+import { Move } from 'lucide-react';
 import { PAGE_SIZES } from '../lib/constants';
 import DragTarget from './DragTarget';
 
@@ -65,19 +66,18 @@ export default function DocBody({ doc, update, zoom = 1, selected, onSelect }) {
   );
 }
 
+/* ============================================================
+   SECTION WRAPPER — dengan drag handle
+   ============================================================ */
+
 function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, children }) {
   const draggingRef = useRef(false);
   const offsetX = section.offsetX || 0;
   const offsetY = section.offsetY || 0;
 
-  const onPointerDown = useCallback((e) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    if (e.target.closest && e.target.closest('[data-toolbar]')) return;
-
-    if (onSelect) onSelect();
+  const onHandleDown = useCallback((e) => {
     if (locked) return;
-    if (!selected) return;
-
+    if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -87,6 +87,7 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
     const origX = offsetX;
     const origY = offsetY;
     const scale = zoom || 1;
+    document.body.style.userSelect = 'none';
 
     const move = (ev) => {
       if (!draggingRef.current) return;
@@ -100,6 +101,7 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
 
     const up = () => {
       draggingRef.current = false;
+      document.body.style.userSelect = '';
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
@@ -108,9 +110,14 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
-  }, [offsetX, offsetY, locked, zoom, onChange, onSelect, selected]);
+  }, [offsetX, offsetY, locked, zoom, onChange]);
 
-  const isDraggable = selected && !locked;
+  const onSectionDown = useCallback((e) => {
+    if (e.target.closest && e.target.closest('[data-toolbar]')) return;
+    if (e.target.closest && e.target.closest('[data-drag-handle]')) return;
+    onSelect && onSelect();
+  }, [onSelect]);
+
   const sectionFont = section.fontFamily || 'inherit';
   const sectionSize = section.fontSize && section.fontSize > 0
     ? `${section.fontSize}px`
@@ -118,13 +125,9 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
 
   return (
     <div
-      data-draggable={isDraggable ? `sec_${section.id}` : undefined}
-      onPointerDown={onPointerDown}
+      onPointerDown={onSectionDown}
       style={{
-        cursor: isDraggable ? 'move' : 'pointer',
-        touchAction: isDraggable ? 'none' : 'auto',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
+        position: 'relative',
         transform: `translate(${offsetX}px, ${offsetY}px)`,
         outline: selected && !locked ? '2px solid rgba(37,99,235,0.85)' : 'none',
         outlineOffset: 4,
@@ -133,10 +136,41 @@ function SectionWrapper({ section, locked, zoom, selected, onSelect, onChange, c
         fontSize: sectionSize,
       }}
     >
+      {selected && !locked && (
+        <button
+          data-drag-handle
+          onPointerDown={onHandleDown}
+          title="Tahan & geser untuk pindah"
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            background: '#2563eb',
+            color: '#fff',
+            border: '2px solid #fff',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'grab',
+            touchAction: 'none',
+            zIndex: 50,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+            padding: 0,
+          }}
+        >
+          <Move className="w-3.5 h-3.5" strokeWidth={2.5} />
+        </button>
+      )}
       {children}
     </div>
   );
 }
+
+/* ============================================================
+   ELEMEN
+   ============================================================ */
 
 function LogoImg({ doc, update, zoom, size, selected, onSelect }) {
   return (
@@ -291,10 +325,7 @@ function ContentSections({ doc, plain, update, zoom, selected, onSelect, patchSe
             <SectionHeading text={s.heading} style={doc.headingStyle} color={doc.accent} plain={plain} />
 
             {s.type === 'table' ? (
-              <TableBlock
-                tableData={s.tableData}
-                align={s.align || 'left'}
-              />
+              <TableBlock tableData={s.tableData} align={s.align || 'left'} />
             ) : (
               s.body && (
                 <p style={{
@@ -345,39 +376,22 @@ function TableBlock({ tableData, align }) {
             return (
               <tr key={ri}>
                 {numbering && (
-                  <td
-                    style={{
-                      border: BORDER,
-                      padding: '6px 8px',
-                      textAlign: 'center',
-                      verticalAlign: 'top',
-                      color: '#111827',
-                      background: 'transparent',
-                      fontWeight: isHeader ? 700 : 400,
-                      width: 28,
-                      minWidth: 28,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  <td style={{
+                    border: BORDER, padding: '6px 8px', textAlign: 'center',
+                    verticalAlign: 'top', color: '#111827',
+                    fontWeight: isHeader ? 700 : 400,
+                    width: 28, minWidth: 28, whiteSpace: 'nowrap',
+                  }}>
                     {isHeader ? 'No.' : dataIndex + 1}
                   </td>
                 )}
                 {row.map((cell, ci) => (
-                  <td
-                    key={ci}
-                    style={{
-                      border: BORDER,
-                      padding: '6px 10px',
-                      textAlign: 'left',
-                      verticalAlign: 'top',
-                      color: '#111827',
-                      background: 'transparent',
-                      fontWeight: isHeader ? 700 : 400,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      minWidth: 40,
-                    }}
-                  >
+                  <td key={ci} style={{
+                    border: BORDER, padding: '6px 10px', textAlign: 'left',
+                    verticalAlign: 'top', color: '#111827',
+                    fontWeight: isHeader ? 700 : 400,
+                    whiteSpace: 'pre-wrap', wordBreak: 'break-word', minWidth: 40,
+                  }}>
                     {cell || '\u00A0'}
                   </td>
                 ))}
