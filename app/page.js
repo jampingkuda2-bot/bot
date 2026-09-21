@@ -14,7 +14,7 @@ import StyleTab from './components/StyleTab';
 import PageTab from './components/PageTab';
 import DataTab from './components/DataTab';
 import PreviewPanel from './components/PreviewPanel';
-import ImportModal from './components/ImportModal';
+import ImportpdfModal from './components/ImportModal';
 
 export default function Home() {
   const [doc, setDoc] = useState(buildInitialDoc);
