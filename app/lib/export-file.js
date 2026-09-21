@@ -10,6 +10,10 @@ export const EXPORT_FORMATS = [
   { id: 'json', label: 'JSON',  ext: '.json', desc: 'Backup / pindah device' },
 ];
 
+const TEXT_COLOR = '111827'; // hitam konsisten
+const SUBTITLE_COLOR = '555555';
+const META_COLOR = '888888';
+
 export async function exportAs(element, doc, format, onProgress) {
   switch (format) {
     case 'pdf':  return exportPdf(element, doc, onProgress);
@@ -37,40 +41,50 @@ function baseName(doc) {
 }
 
 /* ============================================================
-   DOCX — dengan tabel
+   DOCX — semua warna eksplisit, tidak pakai HeadingLevel
    ============================================================ */
 
 async function exportDocx(doc, onProgress) {
   onProgress?.('Menyiapkan DOCX…');
   const {
-    Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
+    Document, Packer, Paragraph, TextRun, AlignmentType,
     Table, TableRow, TableCell, WidthType, BorderStyle,
   } = await import('docx');
 
   const children = [];
 
-  /* ---------- Cover info ---------- */
+  /* ---------- Judul ---------- */
   if (doc.title?.trim()) {
     children.push(new Paragraph({
-      text: doc.title,
-      heading: HeadingLevel.TITLE,
+      children: [new TextRun({
+        text: doc.title,
+        bold: true,
+        size: 40, // 20pt
+        color: TEXT_COLOR,
+      })],
       alignment: alignToDocx(doc.titleAlign, AlignmentType),
       spacing: { after: 120 },
     }));
   }
 
+  /* ---------- Subjudul ---------- */
   if (doc.subtitle?.trim()) {
     children.push(new Paragraph({
-      children: [new TextRun({ text: doc.subtitle, size: 24, color: '555555' })],
+      children: [new TextRun({
+        text: doc.subtitle,
+        size: 24,
+        color: SUBTITLE_COLOR,
+      })],
       spacing: { after: 200 },
     }));
   }
 
+  /* ---------- Penulis + tanggal ---------- */
   if (doc.author?.trim() || doc.date?.trim()) {
     children.push(new Paragraph({
       children: [
-        new TextRun({ text: doc.author || '', bold: true, size: 20 }),
-        new TextRun({ text: doc.date ? '    ' + doc.date : '', size: 20, color: '888888' }),
+        new TextRun({ text: doc.author || '', bold: true, size: 20, color: TEXT_COLOR }),
+        new TextRun({ text: doc.date ? '    ' + doc.date : '', size: 20, color: META_COLOR }),
       ],
       spacing: { after: 300 },
     }));
@@ -85,18 +99,25 @@ async function exportDocx(doc, onProgress) {
 
     if (!hasHeading && !hasBody && !hasTable) return;
 
-    /* Heading */
+    /* Heading — paragraf biasa, bold, hitam */
     if (hasHeading) {
       children.push(new Paragraph({
-        text: s.heading,
-        heading: HeadingLevel.HEADING_1,
+        children: [new TextRun({
+          text: s.heading,
+          bold: true,
+          size: 28, // 14pt
+          color: TEXT_COLOR,
+        })],
         spacing: { before: 240, after: 120 },
       }));
     }
 
     /* Tabel */
     if (hasTable) {
-      children.push(buildDocxTable(s.tableData, { Table, TableRow, TableCell, WidthType, BorderStyle, Paragraph, TextRun, AlignmentType }));
+      children.push(buildDocxTable(s.tableData, {
+        Table, TableRow, TableCell, WidthType, BorderStyle,
+        Paragraph, TextRun, AlignmentType, TEXT_COLOR,
+      }));
       children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
     }
 
@@ -110,7 +131,7 @@ async function exportDocx(doc, onProgress) {
           return;
         }
         children.push(new Paragraph({
-          text: t,
+          children: [new TextRun({ text: t, size: 22, color: TEXT_COLOR })],
           spacing: { after: 100 },
           alignment: alignToDocx(s.align, AlignmentType),
         }));
@@ -130,17 +151,20 @@ async function exportDocx(doc, onProgress) {
 }
 
 function buildDocxTable(tableData, lib) {
-  const { Table, TableRow, TableCell, WidthType, BorderStyle, Paragraph, TextRun, AlignmentType } = lib;
+  const {
+    Table, TableRow, TableCell, WidthType, BorderStyle,
+    Paragraph, TextRun, AlignmentType, TEXT_COLOR,
+  } = lib;
 
   const rows = tableData.rows || [];
   const headerRow = tableData.headerRow !== false;
   const numbering = tableData.numbering !== false;
 
   const borders = {
-    top: { style: BorderStyle.SINGLE, size: 4, color: '111827' },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: '111827' },
-    left: { style: BorderStyle.SINGLE, size: 4, color: '111827' },
-    right: { style: BorderStyle.SINGLE, size: 4, color: '111827' },
+    top:    { style: BorderStyle.SINGLE, size: 4, color: TEXT_COLOR },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: TEXT_COLOR },
+    left:   { style: BorderStyle.SINGLE, size: 4, color: TEXT_COLOR },
+    right:  { style: BorderStyle.SINGLE, size: 4, color: TEXT_COLOR },
   };
 
   const tableRows = rows.map((row, ri) => {
@@ -155,6 +179,7 @@ function buildDocxTable(tableData, lib) {
             text: isHeader ? 'No.' : String(dataIndex + 1),
             bold: isHeader,
             size: 20,
+            color: TEXT_COLOR,
           })],
           alignment: AlignmentType.CENTER,
         })],
@@ -172,6 +197,7 @@ function buildDocxTable(tableData, lib) {
             text: ln,
             bold: isHeader,
             size: 20,
+            color: TEXT_COLOR,
           })],
         })),
         borders,
@@ -194,7 +220,7 @@ function alignToDocx(a, AT) {
 }
 
 /* ============================================================
-   HTML
+   HTML — tanpa accent, semua hitam
    ============================================================ */
 
 async function exportHtmlFile(doc, onProgress) {
@@ -245,14 +271,14 @@ async function exportHtmlFile(doc, onProgress) {
 <meta charset="UTF-8">
 <title>${esc(doc.title || 'Dokumen')}</title>
 <style>
-  body { font-family: ${doc.fontFamily || 'sans-serif'}; max-width: 794px; margin: 40px auto; padding: 40px; color: #111; line-height: ${doc.lineHeight || 1.6}; font-size: ${doc.fontSize || 14}px; }
-  h1 { color: ${doc.accent || '#2563eb'}; }
-  h2 { color: ${doc.accent || '#2563eb'}; border-bottom: 2px solid ${doc.accent || '#2563eb'}; padding-bottom: 4px; margin-top: 32px; }
-  .sub { color: #666; margin-bottom: 12px; }
-  .meta { display: flex; justify-content: space-between; color: #888; font-size: 0.85em; border-bottom: 2px solid ${doc.accent || '#2563eb'}; padding-bottom: 16px; margin-bottom: 24px; }
+  body { font-family: ${doc.fontFamily || 'sans-serif'}; max-width: 794px; margin: 40px auto; padding: 40px; color: #111827; line-height: ${doc.lineHeight || 1.6}; font-size: ${doc.fontSize || 14}px; }
+  h1 { color: #111827; font-size: 2em; margin: 0 0 8px; }
+  h2 { color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; margin-top: 32px; }
+  .sub { color: #555; margin-bottom: 12px; }
+  .meta { display: flex; justify-content: space-between; color: #888; font-size: 0.85em; border-bottom: 2px solid #111827; padding-bottom: 16px; margin-bottom: 24px; }
   p { white-space: pre-wrap; }
   table { border-collapse: collapse; width: auto; margin: 8px 0; }
-  td { border: 1px solid #111827; padding: 6px 10px; vertical-align: top; }
+  td { border: 1px solid #111827; padding: 6px 10px; vertical-align: top; color: #111827; }
 </style>
 </head>
 <body>
