@@ -10,49 +10,29 @@ export async function importAnyFile(file, onProgress) {
   throw new Error(`Format .${ext} belum didukung`);
 }
 
-/* ---------- PDF ---------- */
 async function importPdf(file, onProgress) {
   const res = await extractTextFromPdf(file, onProgress);
-  return {
-    totalPages: res.totalPages,
-    sourceName: file.name,
-    sections: res.sections,
-    rawText: res.rawText,
-  };
+  return { totalPages: res.totalPages, sourceName: file.name, sections: res.sections, rawText: res.rawText };
 }
 
-/* ---------- DOCX ---------- */
 async function importDocx(file, onProgress) {
   onProgress?.(20, 'Membaca DOCX…');
   const mammoth = await import('mammoth');
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.convertToHtml({ arrayBuffer });
-  onProgress?.(70, 'Merapikan struktur…');
-  const html = result.value || '';
-  const sections = htmlToSections(html);
-  return {
-    totalPages: 1,
-    sourceName: file.name,
-    sections,
-    rawText: sections.map(s => (s.heading ? s.heading + '\n' : '') + s.body).join('\n\n'),
-  };
+  onProgress?.(70, 'Merapikan…');
+  const sections = htmlToSections(result.value || '');
+  return { totalPages: 1, sourceName: file.name, sections, rawText: '' };
 }
 
-/* ---------- HTML ---------- */
 async function importHtml(file, onProgress) {
   onProgress?.(30, 'Membaca HTML…');
   const text = await file.text();
   const sections = htmlToSections(text);
   onProgress?.(80, 'Merapikan…');
-  return {
-    totalPages: 1,
-    sourceName: file.name,
-    sections,
-    rawText: sections.map(s => (s.heading ? s.heading + '\n' : '') + s.body).join('\n\n'),
-  };
+  return { totalPages: 1, sourceName: file.name, sections, rawText: '' };
 }
 
-/* ---------- TXT ---------- */
 async function importTxt(file, onProgress) {
   onProgress?.(40, 'Membaca teks…');
   const text = await file.text();
@@ -60,7 +40,6 @@ async function importTxt(file, onProgress) {
   return { totalPages: 1, sourceName: file.name, sections, rawText: text };
 }
 
-/* ---------- MD ---------- */
 async function importMd(file, onProgress) {
   onProgress?.(40, 'Membaca markdown…');
   const text = await file.text();
@@ -69,13 +48,12 @@ async function importMd(file, onProgress) {
 }
 
 /* ============================================================
-   HELPERS
+   HTML → sections (dengan tabel)
    ============================================================ */
 
 function htmlToSections(html) {
   const parser = new DOMParser();
   const dom = parser.parseFromString(html, 'text/html');
-  const body = dom.body;
   const out = [];
   let current = { heading: '', bodyParts: [] };
 
@@ -89,74 +67,89 @@ function htmlToSections(html) {
     current = { heading: '', bodyParts: [] };
   };
 
-  const walk = (node) => {
-    if (!node) return;
-    node.childNodes.forEach((child) => {
-      if (child.nodeType === 3) {
-        const t = child.textContent.trim();
+  const processNode = (node) => {
+    if (node.nodeType === 3) {
+      const t = node.textContent.trim();
+      if (t) current.bodyParts.push(t);
+      return;
+    }
+    if (node.nodeType !== 1) return;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
+      flush();
+      current.heading = node.textContent.trim();
+      return;
+    }
+
+    if (tag === 'table') {
+      flush();
+      const rows = extractTableRows(node);
+      if (rows.length > 0) {
+        out.push({
+          heading: '',
+          tableData: {
+            headerRow: !!node.querySelector('th'),
+            numbering: false,
+            rows,
+          },
+        });
+      }
+      return;
+    }
+
+    if (tag === 'ul' || tag === 'ol') {
+      const items = Array.from(node.querySelectorAll('li'))
+        .map((li) => li.textContent.trim())
+        .filter(Boolean);
+      if (items.length) {
+        const text = tag === 'ul'
+          ? items.map((t) => `• ${t}`).join('\n')
+          : items.map((t, i) => `${i + 1}. ${t}`).join('\n');
+        current.bodyParts.push(text);
+      }
+      return;
+    }
+
+    if (tag === 'p' || tag === 'div' || tag === 'section' || tag === 'article') {
+      const hasBlock = node.querySelector('h1,h2,h3,h4,table,ul,ol,p,div,section');
+      if (hasBlock) {
+        Array.from(node.childNodes).forEach(processNode);
+      } else {
+        const t = node.textContent.trim();
         if (t) current.bodyParts.push(t);
-        return;
       }
-      if (child.nodeType !== 1) return;
+      return;
+    }
 
-      const tag = child.tagName.toLowerCase();
+    if (tag === 'br') {
+      current.bodyParts.push('');
+      return;
+    }
 
-      if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
-        flush();
-        current.heading = child.textContent.trim();
-        return;
-      }
-
-      if (tag === 'ul' || tag === 'ol') {
-        const items = Array.from(child.querySelectorAll('li'))
-          .map((li) => li.textContent.trim())
-          .filter(Boolean);
-        if (items.length) {
-          const bulleted = tag === 'ul'
-            ? items.map((t) => `• ${t}`).join('\n')
-            : items.map((t, i) => `${i + 1}. ${t}`).join('\n');
-          current.bodyParts.push(bulleted);
-        }
-        return;
-      }
-
-      if (tag === 'table') {
-        const rows = Array.from(child.querySelectorAll('tr')).map((tr) =>
-          Array.from(tr.querySelectorAll('td, th')).map((td) => td.textContent.trim())
-        );
-        if (rows.length) {
-          const text = rows.map((r) => r.join(' | ')).join('\n');
-          current.bodyParts.push(text);
-        }
-        return;
-      }
-
-      if (tag === 'p' || tag === 'div' || tag === 'section' || tag === 'article') {
-        const inner = child.textContent.trim();
-        if (inner) {
-          const hasBlockChild = child.querySelector('h1,h2,h3,h4,ul,ol,p,div');
-          if (hasBlockChild) walk(child);
-          else current.bodyParts.push(inner);
-        }
-        return;
-      }
-
-      if (tag === 'br') {
-        current.bodyParts.push('');
-        return;
-      }
-
-      if (tag === 'li') return;
-
-      walk(child);
-    });
+    if (tag === 'li') return;
+    Array.from(node.childNodes).forEach(processNode);
   };
 
-  walk(body);
+  Array.from(dom.body.childNodes).forEach(processNode);
   flush();
-
-  return out.filter((s) => s.heading || s.body);
+  return out.filter((s) => s.heading || s.body || s.tableData);
 }
+
+function extractTableRows(tableEl) {
+  const trs = Array.from(tableEl.querySelectorAll('tr'));
+  return trs
+    .map((tr) => {
+      const cells = Array.from(tr.querySelectorAll('td, th'));
+      return cells.map((c) => c.textContent.trim());
+    })
+    .filter((row) => row.length > 0);
+}
+
+/* ============================================================
+   Markdown → sections (dengan tabel)
+   ============================================================ */
 
 function markdownToSections(md) {
   const lines = md.split(/\r?\n/);
@@ -164,6 +157,7 @@ function markdownToSections(md) {
   let current = { heading: '', bodyParts: [] };
   let listBuffer = [];
   let listMode = null;
+  let tableBuffer = [];
 
   const flushList = () => {
     if (listBuffer.length) {
@@ -177,8 +171,28 @@ function markdownToSections(md) {
     }
   };
 
+  const flushTable = () => {
+    if (tableBuffer.length >= 2) {
+      let rows = tableBuffer;
+      let headerRow = false;
+      if (rows.length >= 2 && rows[1].every((c) => /^[-:]+$/.test(c.trim()))) {
+        headerRow = true;
+        rows = [rows[0], ...rows.slice(2)];
+      }
+      out.push({
+        heading: current.heading,
+        tableData: { headerRow, numbering: false, rows },
+      });
+      current = { heading: '', bodyParts: [] };
+    } else if (tableBuffer.length > 0) {
+      tableBuffer.forEach((row) => current.bodyParts.push(row.join(' | ')));
+    }
+    tableBuffer = [];
+  };
+
   const flushSection = () => {
     flushList();
+    flushTable();
     if (current.heading || current.bodyParts.length) {
       out.push({ heading: current.heading, body: current.bodyParts.join('\n\n').trim() });
     }
@@ -186,7 +200,6 @@ function markdownToSections(md) {
   };
 
   let paragraph = [];
-
   const flushPara = () => {
     if (paragraph.length) {
       current.bodyParts.push(paragraph.join(' ').trim());
@@ -200,6 +213,7 @@ function markdownToSections(md) {
     if (!line) {
       flushPara();
       flushList();
+      flushTable();
       return;
     }
 
@@ -210,6 +224,16 @@ function markdownToSections(md) {
       current.heading = headingMatch[2].trim();
       return;
     }
+
+    if (line.startsWith('|') && line.endsWith('|')) {
+      flushPara();
+      flushList();
+      const cells = line.slice(1, -1).split('|').map((c) => c.trim());
+      tableBuffer.push(cells);
+      return;
+    }
+
+    if (tableBuffer.length) flushTable();
 
     const ulMatch = line.match(/^[-*+]\s+(.+)$/);
     if (ulMatch) {
@@ -235,9 +259,12 @@ function markdownToSections(md) {
 
   flushPara();
   flushSection();
-
-  return out.filter((s) => s.heading || s.body);
+  return out.filter((s) => s.heading || s.body || s.tableData);
 }
+
+/* ============================================================
+   Plain text → sections
+   ============================================================ */
 
 function plainTextToSections(text) {
   const lines = text.split(/\r?\n/);
@@ -273,10 +300,7 @@ function plainTextToSections(text) {
 
   lines.forEach((raw) => {
     const line = raw.trim();
-    if (!line) {
-      flushPara();
-      return;
-    }
+    if (!line) { flushPara(); return; }
     if (isLikelyHeading(line)) {
       flushPara();
       flushSection();
@@ -288,9 +312,7 @@ function plainTextToSections(text) {
 
   flushPara();
   flushSection();
-
   return out.filter((s) => s.heading || s.body);
 }
 
-/* Export converter */
 export { sectionsToDocSections };
