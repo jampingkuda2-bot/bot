@@ -6,7 +6,7 @@ import {
   createTextSection, createTableSection,
   STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug,
 } from './lib/constants';
-import { exportPdf } from './lib/pdf';
+import { exportAs } from './lib/export-file';
 import TopBar from './components/TopBar';
 import Tabs from './components/Tabs';
 import ContentTab from './components/ContentTab';
@@ -15,6 +15,7 @@ import PageTab from './components/PageTab';
 import DataTab from './components/DataTab';
 import PreviewPanel from './components/PreviewPanel';
 import ImportModal from './components/ImportModal';
+import ExportModal from './components/ExportModal';
 
 export default function Home() {
   const [doc, setDoc] = useState(buildInitialDoc);
@@ -27,6 +28,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [focusLast, setFocusLast] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const previewRef = useRef(null);
   const importRef = useRef(null);
 
@@ -114,7 +116,7 @@ export default function Home() {
     e.target.value = '';
   };
 
-  const handleImportPdf = (newSections, mode) => {
+  const handleImport = (newSections, mode) => {
     setDoc((d) => {
       if (mode === 'replace') {
         return {
@@ -129,14 +131,17 @@ export default function Home() {
     setTab('content');
   };
 
-  const handleExport = async () => {
-    if (!previewRef.current) return;
+  const handleExport = async (format) => {
     setExporting(true);
-    setProgress('Memulai…');
+    setProgress('Menyiapkan…');
     try {
-      await exportPdf(previewRef.current, doc, setProgress);
+      const el = format === 'pdf' || format === 'html' ? previewRef.current : null;
+      if (format === 'pdf' && !el) throw new Error('Preview tidak siap');
+      await exportAs(el, doc, format, setProgress);
+      setExportOpen(false);
     } catch (e) {
-      alert('Gagal membuat PDF: ' + e.message);
+      console.error(e);
+      alert('Gagal export: ' + e.message);
     } finally {
       setExporting(false);
       setProgress('');
@@ -181,7 +186,7 @@ export default function Home() {
         exporting={exporting}
         progress={progress}
         onToggleTheme={toggleTheme}
-        onExport={handleExport}
+        onExport={() => setExportOpen(true)}
         onReset={resetDoc}
         onExportJson={exportJson}
         onImportJson={() => importRef.current?.click()}
@@ -195,11 +200,19 @@ export default function Home() {
         onChange={importJson}
       />
 
-      <ImportPdfModal
+      <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        onImport={handleImportPdf}
+        onImport={handleImport}
         hasExistingContent={hasExistingContent}
+      />
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={handleExport}
+        exporting={exporting}
+        progress={progress}
       />
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_1fr] min-h-0">
