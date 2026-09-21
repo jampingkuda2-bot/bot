@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Upload, FileText, Loader2, Check, File } from 'lucide-react';
+import { X, Upload, FileText, Loader2, Check, File, Table as TableIcon } from 'lucide-react';
 import { importAnyFile } from '../lib/import-file';
 import { sectionsToDocSections } from '../lib/pdf-import';
 
@@ -78,6 +78,9 @@ export default function ImportModal({ open, onClose, onImport, hasExistingConten
 
   const fileInput = (e) => handleFile(e.target.files?.[0]);
 
+  const tables = result?.sections.filter((s) => s.tableData).length || 0;
+  const texts = result ? result.sections.length - tables : 0;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4">
       <div className="bg-white dark:bg-neutral-900 w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
@@ -143,27 +146,54 @@ export default function ImportModal({ open, onClose, onImport, hasExistingConten
 
           {result && !busy && (
             <>
-              <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-300">
-                <Check className="w-4 h-4" />
-                <span>{result.sections.length} bagian terdeteksi dari {result.sourceName}</span>
+              <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-300 flex-wrap">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>
+                  {tables > 0
+                    ? `${tables} tabel, ${texts} bagian teks terdeteksi`
+                    : `${texts} bagian terdeteksi`}
+                  {' '}dari {result.sourceName}
+                </span>
               </div>
 
               <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 max-h-64 overflow-y-auto p-3 space-y-2.5">
-                {result.sections.slice(0, 20).map((s, i) => (
+                {result.sections.slice(0, 30).map((s, i) => (
                   <div key={i} className="text-[12px] leading-relaxed">
+                    {s.tableData && (
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold">
+                          <TableIcon className="w-2.5 h-2.5" />
+                          TABEL {s.tableData.rows.length}×{s.tableData.rows[0]?.length || 0}
+                        </span>
+                      </div>
+                    )}
                     {s.heading && (
-                      <div className="font-semibold text-neutral-900 dark:text-white">{s.heading}</div>
+                      <div className="font-semibold text-neutral-900 dark:text-white">
+                        {s.heading}
+                      </div>
                     )}
                     {s.body && (
                       <div className="text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap">
                         {s.body.slice(0, 180)}{s.body.length > 180 ? '…' : ''}
                       </div>
                     )}
+                    {s.tableData && (
+                      <div className="text-neutral-700 dark:text-neutral-300 font-mono text-[10px] whitespace-pre-wrap mt-1 bg-white dark:bg-neutral-900 rounded p-1.5 border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+                        {s.tableData.rows.slice(0, 4).map((r, ri) => (
+                          <div key={ri} className={ri === 0 && s.tableData.headerRow ? 'font-semibold' : ''}>
+                            {r.map((c) => (c || '·')).join(' │ ')}
+                          </div>
+                        ))}
+                        {s.tableData.rows.length > 4 && (
+                          <div className="text-neutral-400">… {s.tableData.rows.length - 4} baris lagi</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
-                {result.sections.length > 20 && (
+                {result.sections.length > 30 && (
                   <div className="text-[11px] text-neutral-500 italic">
-                    … dan {result.sections.length - 20} bagian lagi
+                    … dan {result.sections.length - 30} bagian lagi
                   </div>
                 )}
               </div>
