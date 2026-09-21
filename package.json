@@ -1,5 +1,5 @@
 {
-  "name": "pdf-studio",
+  "name": "Asep-studio",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "docx": "^9.0.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.427.0",
+    "mammoth": "^1.8.0",
     "next": "14.2.5",
     "pdfjs-dist": "^4.7.76",
     "react": "18.3.1",
