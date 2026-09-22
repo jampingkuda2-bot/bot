@@ -7,6 +7,9 @@ import {
   STORAGE_KEY, THEME_KEY, loadLocal, downloadBlob, slug,
 } from './lib/constants';
 import { exportAs } from './lib/export-file';
+import { importAnyFile } from './lib/import-file';
+import { sectionsToDocSections } from './lib/pdf-import';
+import { initFileOpenListener } from './lib/file-open';
 import TopBar from './components/TopBar';
 import Tabs from './components/Tabs';
 import ContentTab from './components/ContentTab';
@@ -36,6 +39,23 @@ export default function Home() {
     setDoc(loadLocal(STORAGE_KEY, buildInitialDoc()));
     setDark(document.documentElement.classList.contains('dark'));
     setReady(true);
+
+    initFileOpenListener(async (file) => {
+      try {
+        const res = await importAnyFile(file, () => {});
+        if (res && res.sections && res.sections.length > 0) {
+          const newSections = sectionsToDocSections(res.sections);
+          setDoc((d) => ({
+            ...d,
+            sections: newSections,
+            title: newSections[0]?.heading || d.title,
+          }));
+          setTab('content');
+        }
+      } catch (e) {
+        console.error('Import dari intent gagal', e);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -133,7 +153,7 @@ export default function Home() {
 
   const handleExport = async (format) => {
     setExporting(true);
-    setProgress('Menyiapkan…');
+    setProgress('Menyiapkan?');
     try {
       const el = format === 'pdf' || format === 'html' ? previewRef.current : null;
       if (format === 'pdf' && !el) throw new Error('Preview tidak siap');
@@ -169,7 +189,7 @@ export default function Home() {
   if (!ready) {
     return (
       <div className="min-h-screen grid place-items-center text-sm text-neutral-400">
-        Memuat…
+        Memuat?
       </div>
     );
   }
