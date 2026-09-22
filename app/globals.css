@@ -21,3 +21,74 @@ input[type="range"] { accent-color: #2563eb; }
 input[type="color"] { padding: 0; border: none; background: transparent; cursor: pointer; }
 input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type="color"]::-webkit-color-swatch { border: 1px solid #d4d4d8; border-radius: 6px; }
+
+/* ============================================
+   iOS Style Utilities (hanya untuk APK)
+   ============================================ */
+
+.ios-blur {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.dark .ios-blur {
+  background: rgba(28, 28, 30, 0.78);
+}
+
+.ios-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.dark .ios-card {
+  background: #1C1C1E;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ios-btn {
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.16);
+  color: #007AFF;
+  font-weight: 500;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.ios-btn:active {
+  transform: scale(0.96);
+  background: rgba(120, 120, 128, 0.24);
+}
+.dark .ios-btn {
+  background: rgba(120, 120, 128, 0.32);
+  color: #0A84FF;
+}
+
+.ios-btn-primary {
+  border-radius: 999px;
+  background: #007AFF;
+  color: #fff;
+  font-weight: 500;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.ios-btn-primary:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+.dark .ios-btn-primary {
+  background: #0A84FF;
+}
+
+.ios-pill {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+.dark .ios-pill {
+  background: rgba(44, 44, 46, 0.9);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.ios-shell {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
